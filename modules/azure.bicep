@@ -13,12 +13,6 @@ param adminPassword string
 @description('Private DNS zone name.')
 param privateDnsZoneName string = 'viridor.local'
 
-@description('Resource ID of the simulated on-premises virtual network.')
-param onPremisesVirtualNetworkResourceId string
-
-@description('Static private IP address of vm-onprem01 in the simulated on-premises network.')
-param onPremisesDomainControllerPrivateIpAddress string
-
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
@@ -267,27 +261,11 @@ module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
   params: {
     name: privateDnsZoneName
     enableTelemetry: false
-    a: [
-      {
-        name: 'vm-onprem01'
-        ttl: 3600
-        aRecords: [
-          {
-            ipv4Address: onPremisesDomainControllerPrivateIpAddress
-          }
-        ]
-      }
-    ]
     virtualNetworkLinks: [
       {
         name: 'link-vnet-azure-registration'
         virtualNetworkResourceId: virtualNetwork.outputs.resourceId
         registrationEnabled: true
-      }
-      {
-        name: 'link-vnet-on-premises-resolution'
-        virtualNetworkResourceId: onPremisesVirtualNetworkResourceId
-        registrationEnabled: false
       }
     ]
     tags: tags
@@ -375,4 +353,4 @@ output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
-output dnsResolverInboundEndpointPrivateIpAddress string = reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').properties.ipConfigurations[0].privateIpAddress
+output dnsResolverInboundEndpointPrivateIpAddress string = reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').ipConfigurations[0].privateIpAddress

@@ -69,8 +69,6 @@ module azure './modules/azure.bicep' = {
     adminUsername: adminUsername
     adminPassword: adminPassword
     privateDnsZoneName: privateDnsZoneName
-    onPremisesVirtualNetworkResourceId: onPremises.outputs.virtualNetworkResourceId
-    onPremisesDomainControllerPrivateIpAddress: onPremises.outputs.domainControllerPrivateIpAddress
     tags: tags
   }
 }

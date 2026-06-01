@@ -71,7 +71,7 @@ To preview changes:
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Azure Firewall, DNS Resolver, Private DNS, VPN gateways, gateway connections, and the Windows VM.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
-- The private DNS zone auto-registers VMs in `vnet-azure`. The `vm-onprem01` record is created explicitly because `vm-onprem01` lives in the simulated on-premises VNet.
+- The private DNS zone auto-registers only VMs in `vnet-azure`.
 - Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
 - Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.
 - VPN gateways can take a long time to deploy.

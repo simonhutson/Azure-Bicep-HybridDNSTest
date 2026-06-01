@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "8176430480770317060"
+      "templateHash": "6530071699425796715"
     }
   },
   "parameters": {
@@ -16273,12 +16273,6 @@
           "privateDnsZoneName": {
             "value": "[parameters('privateDnsZoneName')]"
           },
-          "onPremisesVirtualNetworkResourceId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.virtualNetworkResourceId.value]"
-          },
-          "onPremisesDomainControllerPrivateIpAddress": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.domainControllerPrivateIpAddress.value]"
-          },
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -16290,7 +16284,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "18048777367864002709"
+              "templateHash": "12838245133364914479"
             }
           },
           "parameters": {
@@ -16318,18 +16312,6 @@
               "defaultValue": "viridor.local",
               "metadata": {
                 "description": "Private DNS zone name."
-              }
-            },
-            "onPremisesVirtualNetworkResourceId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the simulated on-premises virtual network."
-              }
-            },
-            "onPremisesDomainControllerPrivateIpAddress": {
-              "type": "string",
-              "metadata": {
-                "description": "Static private IP address of vm-onprem01 in the simulated on-premises network."
               }
             },
             "tags": {
@@ -21600,30 +21582,12 @@
                   "enableTelemetry": {
                     "value": false
                   },
-                  "a": {
-                    "value": [
-                      {
-                        "name": "vm-onprem01",
-                        "ttl": 3600,
-                        "aRecords": [
-                          {
-                            "ipv4Address": "[parameters('onPremisesDomainControllerPrivateIpAddress')]"
-                          }
-                        ]
-                      }
-                    ]
-                  },
                   "virtualNetworkLinks": {
                     "value": [
                       {
                         "name": "link-vnet-azure-registration",
                         "virtualNetworkResourceId": "[reference(resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName')), '2025-04-01').outputs.resourceId.value]",
                         "registrationEnabled": true
-                      },
-                      {
-                        "name": "link-vnet-on-premises-resolution",
-                        "virtualNetworkResourceId": "[parameters('onPremisesVirtualNetworkResourceId')]",
-                        "registrationEnabled": false
                       }
                     ]
                   },
@@ -36846,14 +36810,13 @@
             },
             "dnsResolverInboundEndpointPrivateIpAddress": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').properties.ipConfigurations[0].privateIpAddress]"
+              "value": "[reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').ipConfigurations[0].privateIpAddress]"
             }
           }
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment')]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]"
       ]
     },
     {
