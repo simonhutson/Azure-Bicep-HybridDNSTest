@@ -46,7 +46,7 @@ az login
 .\deploy.ps1
 ```
 
-The script prompts for the secure values, validates the subscription-scope deployment, and then starts the deployment. It defaults to `swedencentral` and can be overridden:
+The script prompts for the secure values, validates the subscription-scope deployment, and then starts the deployment. It uses the current Azure CLI subscription unless `-SubscriptionId` or the `AZURE_SUBSCRIPTION_ID` environment variable is provided. The location defaults to `swedencentral` and can be overridden:
 
 ```powershell
 .\deploy.ps1 -Location uksouth -SubscriptionId '<subscription-id>'

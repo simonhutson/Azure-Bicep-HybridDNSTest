@@ -7,7 +7,7 @@ param(
     [string]$AzureResourceGroupName = 'rg-azure',
     [string]$AdminUsername = 'azureadmin',
     [string]$PrivateDnsZoneName = 'viridor.local',
-    [string]$SubscriptionId = '2034b77c-48e2-442d-be31-ac5148fb0067',
+    [string]$SubscriptionId = $env:AZURE_SUBSCRIPTION_ID,
     [securestring]$AdminPassword,
     [securestring]$DomainSafeModeAdminPassword,
     [securestring]$VpnSharedKey,
@@ -51,6 +51,22 @@ function Invoke-AzDeploymentCommand {
     }
 }
 
+function Get-AvailableSubscriptionMessage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Subscriptions
+    )
+
+    if ($Subscriptions.Count -eq 0) {
+        return 'No subscriptions are visible to the current Azure CLI login.'
+    }
+
+    $Subscriptions |
+        Sort-Object -Property name |
+        ForEach-Object { '{0} ({1})' -f $_.name, $_.id } |
+        Out-String
+}
+
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
     throw 'Azure CLI was not found. Install Azure CLI before running this script.'
 }
@@ -59,15 +75,33 @@ if (-not (Test-Path -Path $TemplateFile -PathType Leaf)) {
     throw "Template file not found: $TemplateFile"
 }
 
-$null = & az account show --only-show-errors 2>$null
+$currentAccountJson = & az account show --only-show-errors 2>$null
 if ($LASTEXITCODE -ne 0) {
     throw 'Azure CLI is not signed in. Run az login, then rerun this script.'
 }
 
+$currentAccount = ($currentAccountJson | Out-String) | ConvertFrom-Json
+
 if ($SubscriptionId) {
+    $subscriptionsJson = & az account list --all --only-show-errors
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to list Azure subscriptions for the current Azure CLI login.'
+    }
+
+    $subscriptions = @(($subscriptionsJson | Out-String) | ConvertFrom-Json)
+    $selectedSubscription = @($subscriptions | Where-Object { $_.id -eq $SubscriptionId -or $_.name -eq $SubscriptionId })
+
+    if ($selectedSubscription.Count -eq 0) {
+        $availableSubscriptions = Get-AvailableSubscriptionMessage -Subscriptions $subscriptions
+        throw "Subscription '$SubscriptionId' is not available in AzureCloud for the current Azure CLI login. Current subscription is '$($currentAccount.name)' ($($currentAccount.id)). Available subscriptions: $availableSubscriptions"
+    }
+
     Invoke-AzDeploymentCommand `
         -Description "Selecting subscription $SubscriptionId..." `
         -Arguments @('account', 'set', '--subscription', $SubscriptionId)
+}
+else {
+    Write-Host "Using current Azure CLI subscription '$($currentAccount.name)' ($($currentAccount.id))."
 }
 
 if (-not $AdminPassword) {

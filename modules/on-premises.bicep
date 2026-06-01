@@ -24,12 +24,13 @@ var virtualNetworkName = 'vnet-on-premises'
 var domainControllerName = 'ad01'
 var domainControllerPrivateIpAddress = '10.0.1.4'
 var adSubnetName = 'ad'
+var configureAddsCommand = 'powershell.exe -ExecutionPolicy Bypass -Command "& { $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Install-ADDSForest -DomainName `"${privateDnsZoneName}`" -DomainNetbiosName VIRIDOR -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force }"'
 
 var subnetResourceIds = {
   ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
 }
 
-module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5' = {
+module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
   name: 'nsg-ad'
   params: {
     name: 'nsg-ad'
@@ -39,7 +40,7 @@ module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:
   }
 }
 
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9' = {
+module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
   name: virtualNetworkName
   params: {
     name: virtualNetworkName
@@ -66,7 +67,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9' = {
   }
 }
 
-module bastionHost 'br/public:avm/res/network/bastion-host:0.8' = {
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
   name: 'bas-on-premises-dev'
   params: {
     name: 'bas-on-premises-dev'
@@ -78,7 +79,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8' = {
   }
 }
 
-module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11' = {
+module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
   name: 'vgw-on-premises'
   params: {
     name: 'vgw-on-premises'
@@ -97,7 +98,7 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
   }
 }
 
-module domainController 'br/public:avm/res/compute/virtual-machine:0.22' = {
+module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
   name: domainControllerName
   params: {
     name: domainControllerName
@@ -149,7 +150,7 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22' = {
       name: 'configure-adds-dns'
       typeHandlerVersion: '1.10'
       protectedSettings: {
-        commandToExecute: 'powershell.exe -ExecutionPolicy Bypass -Command "$safeModePassword = ConvertTo-SecureString ''${domainSafeModeAdminPassword}'' -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; if (-not (Get-ADDomain -ErrorAction SilentlyContinue)) { Install-ADDSForest -DomainName ''${privateDnsZoneName}'' -DomainNetbiosName ''VIRIDOR'' -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion:$false }"'
+        commandToExecute: configureAddsCommand
       }
     }
     enableTelemetry: false

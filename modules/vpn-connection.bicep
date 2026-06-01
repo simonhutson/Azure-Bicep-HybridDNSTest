@@ -19,7 +19,7 @@ param vpnSharedKey string
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
-module connection 'br/public:avm/res/network/connection:0.1' = {
+module connection 'br/public:avm/res/network/connection:0.1.7' = {
   name: connectionName
   params: {
     name: connectionName

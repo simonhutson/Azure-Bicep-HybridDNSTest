@@ -144,7 +144,7 @@ var subnetResourceIds = {
   dnsResolverOutbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-outbound')
 }
 
-module networkSecurityGroups 'br/public:avm/res/network/network-security-group:0.5' = [for nsgName in nsgNames: {
+module networkSecurityGroups 'br/public:avm/res/network/network-security-group:0.5.3' = [for nsgName in nsgNames: {
   name: nsgName
   params: {
     name: nsgName
@@ -154,7 +154,7 @@ module networkSecurityGroups 'br/public:avm/res/network/network-security-group:0
   }
 }]
 
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9' = {
+module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
   name: virtualNetworkName
   params: {
     name: virtualNetworkName
@@ -171,7 +171,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9' = {
   ]
 }
 
-module bastionHost 'br/public:avm/res/network/bastion-host:0.8' = {
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
   name: 'bas-vwm01-dev'
   params: {
     name: 'bas-vwm01-dev'
@@ -183,7 +183,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8' = {
   }
 }
 
-module azureFirewall 'br/public:avm/res/network/azure-firewall:0.10' = {
+module azureFirewall 'br/public:avm/res/network/azure-firewall:0.10.1' = {
   name: 'afw-vwm01-basic'
   params: {
     name: 'afw-vwm01-basic'
@@ -209,7 +209,7 @@ module azureFirewall 'br/public:avm/res/network/azure-firewall:0.10' = {
   }
 }
 
-module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5' = {
+module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5.7' = {
   name: 'dnspr-vwm01'
   params: {
     name: 'dnspr-vwm01'
@@ -233,7 +233,7 @@ module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5' = {
   }
 }
 
-module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8' = {
+module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
   name: 'pdns-${replace(privateDnsZoneName, '.', '-')}'
   params: {
     name: privateDnsZoneName
@@ -265,7 +265,7 @@ module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8' = {
   }
 }
 
-module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11' = {
+module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
   name: 'vgw-vwm01'
   params: {
     name: 'vgw-vwm01'
@@ -288,4 +288,4 @@ output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.outputs.privateIp
-output dnsResolverInboundEndpointPrivateIpAddress string = dnsResolver.outputs.inboundEndpointsObject[0].properties.ipConfigurations[0].privateIpAddress
+output dnsResolverInboundEndpointPrivateIpAddress string = any(dnsResolver.outputs.inboundEndpointsObject)[0].properties.ipConfigurations[0].privateIpAddress

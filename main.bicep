@@ -33,13 +33,13 @@ param tags object = {
   environment: 'lab'
 }
 
-resource onPremisesResourceGroup 'Microsoft.Resources/resourceGroups@2024-11-01' = {
+resource onPremisesResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: onPremisesResourceGroupName
   location: location
   tags: tags
 }
 
-resource azureResourceGroup 'Microsoft.Resources/resourceGroups@2024-11-01' = {
+resource azureResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: azureResourceGroupName
   location: location
   tags: tags
