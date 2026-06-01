@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.30.23.60470",
-      "templateHash": "4478978587897404192"
+      "templateHash": "7943739732814426934"
     }
   },
   "parameters": {
@@ -125,7 +125,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "14996360175865015169"
+              "templateHash": "14252781540924715041"
             }
           },
           "parameters": {
@@ -4416,7 +4416,11 @@
                     "value": "VpnGw1AZ"
                   },
                   "publicIpAvailabilityZones": {
-                    "value": []
+                    "value": [
+                      1,
+                      2,
+                      3
+                    ]
                   },
                   "clusterSettings": {
                     "value": {
@@ -16268,7 +16272,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.30.23.60470",
-              "templateHash": "8262711450594487350"
+              "templateHash": "15404058169203771121"
             }
           },
           "parameters": {
@@ -27060,7 +27064,11 @@
                     "value": "VpnGw1AZ"
                   },
                   "publicIpAvailabilityZones": {
-                    "value": []
+                    "value": [
+                      1,
+                      2,
+                      3
+                    ]
                   },
                   "clusterSettings": {
                     "value": {

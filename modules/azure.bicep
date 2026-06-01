@@ -274,7 +274,11 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
     vpnType: 'RouteBased'
     vpnGatewayGeneration: 'Generation1'
     skuName: 'VpnGw1AZ'
-    publicIpAvailabilityZones: []
+    publicIpAvailabilityZones: [
+      1
+      2
+      3
+    ]
     clusterSettings: {
       clusterMode: 'activePassiveNoBgp'
     }
