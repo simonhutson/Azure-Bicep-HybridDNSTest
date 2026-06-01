@@ -24,8 +24,11 @@ param domainSafeModeAdminPassword string
 @description('Shared key used by both VNet-to-VNet IPsec VPN connections.')
 param vpnSharedKey string
 
-@description('Private DNS zone and Active Directory DNS domain name.')
+@description('Private DNS zone name for Azure VM registration.')
 param privateDnsZoneName string = 'viridor.local'
+
+@description('Active Directory DNS domain name for the simulated on-premises forest.')
+param activeDirectoryDomainName string = 'viridor.onprem'
 
 @description('Tags applied to deployed resources.')
 param tags object = {
@@ -53,7 +56,7 @@ module onPremises './modules/on-premises.bicep' = {
     adminUsername: adminUsername
     adminPassword: adminPassword
     domainSafeModeAdminPassword: domainSafeModeAdminPassword
-    privateDnsZoneName: privateDnsZoneName
+    activeDirectoryDomainName: activeDirectoryDomainName
     tags: tags
   }
 }
@@ -63,6 +66,8 @@ module azure './modules/azure.bicep' = {
   scope: azureResourceGroup
   params: {
     location: location
+    adminUsername: adminUsername
+    adminPassword: adminPassword
     privateDnsZoneName: privateDnsZoneName
     onPremisesVirtualNetworkResourceId: onPremises.outputs.virtualNetworkResourceId
     onPremisesDomainControllerPrivateIpAddress: onPremises.outputs.domainControllerPrivateIpAddress
@@ -75,7 +80,7 @@ module onPremisesToAzureConnection './modules/vpn-connection.bicep' = {
   scope: onPremisesResourceGroup
   params: {
     location: location
-    connectionName: 'cn-vnet-on-premises-to-vnet-vwm01'
+    connectionName: 'cn-vnet-on-premises-to-vnet-azure'
     localVirtualNetworkGatewayResourceId: onPremises.outputs.virtualNetworkGatewayResourceId
     remoteVirtualNetworkGatewayResourceId: azure.outputs.virtualNetworkGatewayResourceId
     vpnSharedKey: vpnSharedKey
@@ -88,7 +93,7 @@ module azureToOnPremisesConnection './modules/vpn-connection.bicep' = {
   scope: azureResourceGroup
   params: {
     location: location
-    connectionName: 'cn-vnet-vwm01-to-vnet-on-premises'
+    connectionName: 'cn-vnet-azure-to-vnet-on-premises'
     localVirtualNetworkGatewayResourceId: azure.outputs.virtualNetworkGatewayResourceId
     remoteVirtualNetworkGatewayResourceId: onPremises.outputs.virtualNetworkGatewayResourceId
     vpnSharedKey: vpnSharedKey

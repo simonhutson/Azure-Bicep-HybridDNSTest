@@ -6,14 +6,16 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 - Resource groups `rg-on-premises` and `rg-azure`.
 - Simulated on-premises VNet `vnet-on-premises` with address space `10.0.0.0/8`.
-- Windows Server domain controller VM `ad01` on subnet `ad` at `10.0.1.4`.
-- Active Directory Domain Services forest and integrated DNS for `viridor.local`.
-- Simulated Azure VNet `vnet-vwm01` with address space `172.19.0.0/16`.
+- Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ad` at `10.0.1.4`.
+- Active Directory Domain Services forest and integrated DNS for `viridor.onprem` with NetBIOS name `VIRIDOR`.
+- Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
+- Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` and `vm-azure02` on private-only NICs.
 - Azure DNS Private Resolver with inbound and outbound endpoint subnets.
-- Private DNS zone `viridor.local`, linked to `vnet-vwm01` with registration enabled.
-- Azure Firewall Basic and Azure Bastion Developer.
+- Private DNS zone `viridor.local`, linked to `vnet-azure` with registration enabled.
+- Azure Firewall Standard and Azure Bastion Developer.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
+- No VM NIC creates or attaches a public IP address.
 
 ## Files
 
@@ -32,10 +34,11 @@ The request included CIDR values that Azure will not accept as written. The temp
 - `vcpe-corp`: `172.19.80.96.28` was corrected to `172.19.80.96/28`.
 - `dhcp`: corrected from invalid and overlapping `172.19.15.0/18` to `172.19.15.0/28`.
 
-The requested `172.19.85.0/24` Azure Firewall area overlaps the `fw04-*` subnets, so the deployable Azure Firewall platform subnets are carved from that range as:
+The Azure Firewall platform subnets use the explicitly requested non-overlapping ranges:
 
-- `AzureFirewallSubnet`: `172.19.85.0/26`
-- `AzureFirewallManagementSubnet`: `172.19.85.128/26`
+- `AzureFirewallSubnet`: `172.19.1.0/25`
+
+The `172.19.85.0/24` area is represented by the requested `fw04-*` workload subnets, which would overlap an Azure Firewall platform subnet if both used that same `/24`.
 
 ## Deployment
 
@@ -68,5 +71,7 @@ To preview changes:
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Azure Firewall, DNS Resolver, Private DNS, VPN gateways, gateway connections, and the Windows VM.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
-- The private DNS zone auto-registers VMs in `vnet-vwm01`. The `ad01` record is created explicitly because `ad01` lives in the simulated on-premises VNet.
+- The private DNS zone auto-registers VMs in `vnet-azure`. The `vm-onprem01` record is created explicitly because `vm-onprem01` lives in the simulated on-premises VNet.
+- Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
+- Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.
 - VPN gateways can take a long time to deploy.

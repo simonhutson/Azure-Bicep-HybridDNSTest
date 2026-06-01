@@ -3,19 +3,26 @@ targetScope = 'resourceGroup'
 @description('Azure region for resources.')
 param location string = resourceGroup().location
 
+@description('Administrator username for Azure test VMs.')
+param adminUsername string
+
+@secure()
+@description('Administrator password for Azure test VMs.')
+param adminPassword string
+
 @description('Private DNS zone name.')
 param privateDnsZoneName string = 'viridor.local'
 
 @description('Resource ID of the simulated on-premises virtual network.')
 param onPremisesVirtualNetworkResourceId string
 
-@description('Static private IP address of ad01 in the simulated on-premises network.')
+@description('Static private IP address of vm-onprem01 in the simulated on-premises network.')
 param onPremisesDomainControllerPrivateIpAddress string
 
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
-var virtualNetworkName = 'vnet-vwm01'
+var virtualNetworkName = 'vnet-azure'
 
 var nsgNames = [
   'nsg-zscaler-zpa'
@@ -127,22 +134,31 @@ var platformSubnetDefinitions = [
   }
   {
     name: 'AzureFirewallSubnet'
-    addressPrefix: '172.19.1.0/26'
-  }
-  {
-    name: 'AzureFirewallManagementSubnet'
-    addressPrefix: '172.19.1.128/26'
+    addressPrefix: '172.19.1.0/25'
   }
   {
     name: 'GatewaySubnet'
-    addressPrefix: '172.19.0.0/27'
+    addressPrefix: '172.19.0.0/24'
   }
 ]
 
 var subnetResourceIds = {
   dnsResolverInbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-inbound')
   dnsResolverOutbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-outbound')
+  avd01: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'avd01')
+  vcpeCorp: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'vcpe-corp')
 }
+
+var azureVmDefinitions = [
+  {
+    name: 'vm-azure01'
+    subnetResourceId: subnetResourceIds.vcpeCorp
+  }
+  {
+    name: 'vm-azure02'
+    subnetResourceId: subnetResourceIds.avd01
+  }
+]
 
 module networkSecurityGroups 'br/public:avm/res/network/network-security-group:0.5.3' = [for nsgName in nsgNames: {
   name: nsgName
@@ -172,9 +188,9 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
 }
 
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
-  name: 'bas-vwm01-dev'
+  name: 'bas-azure-dev'
   params: {
-    name: 'bas-vwm01-dev'
+    name: 'bas-azure-dev'
     location: location
     skuName: 'Developer'
     virtualNetworkResourceId: virtualNetwork.outputs.resourceId
@@ -183,36 +199,49 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
   }
 }
 
-module azureFirewall 'br/public:avm/res/network/azure-firewall:0.10.1' = {
-  name: 'afw-vwm01-basic'
-  params: {
-    name: 'afw-vwm01-basic'
-    location: location
-    virtualNetworkResourceId: virtualNetwork.outputs.resourceId
-    azureSkuTier: 'Basic'
-    availabilityZones: []
-    enableManagementNic: true
-    publicIPAddressObject: {
-      name: 'pip-afw-vwm01-basic'
-      availabilityZones: []
-      skuName: 'Standard'
-      skuTier: 'Regional'
-    }
-    managementIPAddressObject: {
-      name: 'pip-afw-vwm01-basic-mgmt'
-      availabilityZones: []
-      skuName: 'Standard'
-      skuTier: 'Regional'
-    }
-    enableTelemetry: false
-    tags: tags
+resource azureFirewallPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: 'pip-afw-azure-standard'
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
   }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  tags: tags
+}
+
+resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-11-01' = {
+  name: 'afw-azure-standard'
+  location: location
+  properties: {
+    sku: {
+      name: 'AZFW_VNet'
+      tier: 'Standard'
+    }
+    threatIntelMode: 'Deny'
+    ipConfigurations: [
+      {
+        name: 'pip-afw-azure-standard'
+        properties: {
+          subnet: {
+            id: '${virtualNetwork.outputs.resourceId}/subnets/AzureFirewallSubnet'
+          }
+          publicIPAddress: {
+            id: azureFirewallPublicIp.id
+          }
+        }
+      }
+    ]
+  }
+  tags: tags
 }
 
 module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5.7' = {
-  name: 'dnspr-vwm01'
+  name: 'dnspr-azure'
   params: {
-    name: 'dnspr-vwm01'
+    name: 'dnspr-azure'
     location: location
     virtualNetworkResourceId: virtualNetwork.outputs.resourceId
     inboundEndpoints: [
@@ -240,7 +269,7 @@ module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
     enableTelemetry: false
     a: [
       {
-        name: 'ad01'
+        name: 'vm-onprem01'
         ttl: 3600
         aRecords: [
           {
@@ -251,7 +280,7 @@ module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
     ]
     virtualNetworkLinks: [
       {
-        name: 'link-vnet-vwm01-registration'
+        name: 'link-vnet-azure-registration'
         virtualNetworkResourceId: virtualNetwork.outputs.resourceId
         registrationEnabled: true
       }
@@ -265,15 +294,69 @@ module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
   }
 }
 
-module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
-  name: 'vgw-vwm01'
+module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' = [for vm in azureVmDefinitions: {
+  name: vm.name
   params: {
-    name: 'vgw-vwm01'
+    name: vm.name
+    computerName: vm.name
+    location: location
+    availabilityZone: -1
+    osType: 'Windows'
+    vmSize: 'Standard_B2ms'
+    adminUsername: adminUsername
+    adminPassword: adminPassword
+    imageReference: {
+      publisher: 'MicrosoftWindowsServer'
+      offer: 'WindowsServer'
+      sku: '2025-datacenter-azure-edition'
+      version: 'latest'
+    }
+    osDisk: {
+      caching: 'ReadWrite'
+      createOption: 'FromImage'
+      deleteOption: 'Delete'
+      managedDisk: {
+        storageAccountType: 'StandardSSD_LRS'
+      }
+    }
+    nicConfigurations: [
+      {
+        name: '${vm.name}-nic'
+        nicSuffix: '-nic'
+        deleteOption: 'Delete'
+        enableAcceleratedNetworking: false
+        ipConfigurations: [
+          {
+            name: 'ipconfig1'
+            subnetResourceId: vm.subnetResourceId
+            privateIPAllocationMethod: 'Dynamic'
+            pipConfiguration: null
+          }
+        ]
+      }
+    ]
+    bootDiagnostics: true
+    extensionAntiMalwareConfig: {
+      enabled: true
+    }
+    enableTelemetry: false
+    tags: tags
+  }
+  dependsOn: [
+    virtualNetwork
+  ]
+}]
+
+module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
+  name: 'vgw-azure'
+  params: {
+    name: 'vgw-azure'
     location: location
     gatewayType: 'Vpn'
     vpnType: 'RouteBased'
     vpnGatewayGeneration: 'Generation1'
     skuName: 'VpnGw1AZ'
+    primaryPublicIPName: 'vgw-azure-zonal-pip1'
     publicIpAvailabilityZones: [
       1
       2
@@ -291,5 +374,5 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
-output azureFirewallPrivateIpAddress string = azureFirewall.outputs.privateIp
+output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
 output dnsResolverInboundEndpointPrivateIpAddress string = any(dnsResolver.outputs.inboundEndpointsObject)[0].properties.ipConfigurations[0].privateIpAddress

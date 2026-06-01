@@ -14,17 +14,17 @@ param adminPassword string
 @description('Directory Services Restore Mode password for the new Active Directory forest.')
 param domainSafeModeAdminPassword string
 
-@description('Private DNS zone and Active Directory DNS domain name.')
-param privateDnsZoneName string
+@description('Active Directory DNS domain name for the simulated on-premises forest.')
+param activeDirectoryDomainName string = 'viridor.onprem'
 
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
 var virtualNetworkName = 'vnet-on-premises'
-var domainControllerName = 'ad01'
+var domainControllerName = 'vm-onprem01'
 var domainControllerPrivateIpAddress = '10.0.1.4'
 var adSubnetName = 'ad'
-var configureAddsCommand = 'powershell.exe -ExecutionPolicy Bypass -Command "& { $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Install-ADDSForest -DomainName `"${privateDnsZoneName}`" -DomainNetbiosName VIRIDOR -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force }"'
+var configureAddsCommand = 'powershell.exe -ExecutionPolicy Bypass -Command "& { $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Install-ADDSForest -DomainName `"${activeDirectoryDomainName}`" -DomainNetbiosName VIRIDOR -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force }"'
 
 var subnetResourceIds = {
   ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
@@ -60,7 +60,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
       }
       {
         name: 'GatewaySubnet'
-        addressPrefix: '10.255.255.0/27'
+        addressPrefix: '10.0.0.0/24'
       }
     ]
     tags: tags
@@ -88,6 +88,7 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
     vpnType: 'RouteBased'
     vpnGatewayGeneration: 'Generation1'
     skuName: 'VpnGw1AZ'
+    primaryPublicIPName: 'vgw-on-premises-zonal-pip1'
     publicIpAvailabilityZones: [
       1
       2
@@ -116,7 +117,7 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
     imageReference: {
       publisher: 'MicrosoftWindowsServer'
       offer: 'WindowsServer'
-      sku: '2022-datacenter-azure-edition'
+      sku: '2025-datacenter-azure-edition'
       version: 'latest'
     }
     osDisk: {
@@ -142,6 +143,7 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
             subnetResourceId: subnetResourceIds.ad
             privateIPAddress: domainControllerPrivateIpAddress
             privateIPAllocationMethod: 'Static'
+            pipConfiguration: null
           }
         ]
       }
