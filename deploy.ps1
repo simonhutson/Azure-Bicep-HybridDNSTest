@@ -7,7 +7,7 @@ param(
     [string]$AzureResourceGroupName = 'rg-azure',
     [string]$AdminUsername = 'azureadmin',
     [string]$PrivateDnsZoneName = 'viridor.local',
-    [string]$SubscriptionId,
+    [string]$SubscriptionId = '2034b77c-48e2-442d-be31-ac5148fb0067',
     [securestring]$AdminPassword,
     [securestring]$DomainSafeModeAdminPassword,
     [securestring]$VpnSharedKey,
