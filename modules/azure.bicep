@@ -375,4 +375,4 @@ output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
-output dnsResolverInboundEndpointPrivateIpAddress string = any(dnsResolver.outputs.inboundEndpointsObject)[0].properties.ipConfigurations[0].privateIpAddress
+output dnsResolverInboundEndpointPrivateIpAddress string = reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').properties.ipConfigurations[0].privateIpAddress
