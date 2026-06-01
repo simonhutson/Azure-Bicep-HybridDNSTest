@@ -14,17 +14,22 @@ param adminPassword string
 @description('Directory Services Restore Mode password for the new Active Directory forest.')
 param domainSafeModeAdminPassword string
 
-@description('Active Directory DNS domain name for the simulated on-premises forest.')
-param activeDirectoryDomainName string = 'viridor.onprem'
+@description('Active Directory DNS domain name for the simulated on-prem forest.')
+param activeDirectoryDomainName string = 'contoso.onprem'
+
+@minLength(1)
+@maxLength(15)
+@description('Active Directory NetBIOS name for the simulated on-prem forest.')
+param activeDirectoryNetbiosName string = 'CONTOSO'
 
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
-var virtualNetworkName = 'vnet-on-premises'
+var virtualNetworkName = 'vnet-onprem'
 var domainControllerName = 'vm-onprem01'
 var domainControllerPrivateIpAddress = '10.0.1.4'
 var adSubnetName = 'ad'
-var configureAddsCommand = 'powershell.exe -ExecutionPolicy Bypass -Command "& { $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Install-ADDSForest -DomainName `"${activeDirectoryDomainName}`" -DomainNetbiosName VIRIDOR -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force }"'
+var configureAddsCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { $ErrorActionPreference = `"Stop`"; $domainName = `"${activeDirectoryDomainName}`"; $netbiosName = `"${activeDirectoryNetbiosName}`"; $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; if (Get-Service -Name NTDS -ErrorAction SilentlyContinue) { Write-Host `"Domain controller role already configured.`"; exit 0 }; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Import-Module ADDSDeployment; Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion; New-Item -Path C:/AzureData -ItemType Directory -Force | Out-Null; Set-Content -Path C:/AzureData/adds-promotion-requested.txt -Value (Get-Date -Format o); shutdown.exe /r /t 30 /c `"Completing AD DS forest promotion`"; exit 0 }"'
 
 var subnetResourceIds = {
   ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
@@ -68,9 +73,9 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
 }
 
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
-  name: 'bas-on-premises-dev'
+  name: 'bas-onprem-dev'
   params: {
-    name: 'bas-on-premises-dev'
+    name: 'bas-onprem-dev'
     location: location
     skuName: 'Developer'
     virtualNetworkResourceId: virtualNetwork.outputs.resourceId
@@ -80,15 +85,15 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
 }
 
 module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
-  name: 'vgw-on-premises'
+  name: 'vgw-onprem'
   params: {
-    name: 'vgw-on-premises'
+    name: 'vgw-onprem'
     location: location
     gatewayType: 'Vpn'
     vpnType: 'RouteBased'
     vpnGatewayGeneration: 'Generation1'
     skuName: 'VpnGw1AZ'
-    primaryPublicIPName: 'vgw-on-premises-zonal-pip1'
+    primaryPublicIPName: 'vgw-onprem-zonal-pip1'
     publicIpAvailabilityZones: [
       1
       2
@@ -111,7 +116,7 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
     location: location
     availabilityZone: -1
     osType: 'Windows'
-    vmSize: 'Standard_B2ms'
+    vmSize: 'Standard_D2ads_v5'
     adminUsername: adminUsername
     adminPassword: adminPassword
     imageReference: {

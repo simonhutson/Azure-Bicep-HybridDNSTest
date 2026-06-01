@@ -3,8 +3,8 @@ targetScope = 'subscription'
 @description('Azure region for all resource groups and resources.')
 param location string = 'uksouth'
 
-@description('Resource group name for the simulated on-premises environment.')
-param onPremisesResourceGroupName string = 'rg-on-premises'
+@description('Resource group name for the simulated on-prem environment.')
+param onPremResourceGroupName string = 'rg-onprem'
 
 @description('Resource group name for the simulated Azure environment.')
 param azureResourceGroupName string = 'rg-azure'
@@ -25,10 +25,15 @@ param domainSafeModeAdminPassword string
 param vpnSharedKey string
 
 @description('Private DNS zone name for Azure VM registration.')
-param privateDnsZoneName string = 'viridor.local'
+param privateDnsZoneName string = 'contoso.azure'
 
-@description('Active Directory DNS domain name for the simulated on-premises forest.')
-param activeDirectoryDomainName string = 'viridor.onprem'
+@description('Active Directory DNS domain name for the simulated on-prem forest.')
+param activeDirectoryDomainName string = 'contoso.onprem'
+
+@minLength(1)
+@maxLength(15)
+@description('Active Directory NetBIOS name for the simulated on-prem forest.')
+param activeDirectoryNetbiosName string = 'CONTOSO'
 
 @description('Tags applied to deployed resources.')
 param tags object = {
@@ -36,8 +41,8 @@ param tags object = {
   environment: 'lab'
 }
 
-resource onPremisesResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: onPremisesResourceGroupName
+resource onPremResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+  name: onPremResourceGroupName
   location: location
   tags: tags
 }
@@ -48,15 +53,16 @@ resource azureResourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   tags: tags
 }
 
-module onPremises './modules/on-premises.bicep' = {
-  name: 'on-premises-environment'
-  scope: onPremisesResourceGroup
+module onPrem './modules/onprem.bicep' = {
+  name: 'onprem-environment'
+  scope: onPremResourceGroup
   params: {
     location: location
     adminUsername: adminUsername
     adminPassword: adminPassword
     domainSafeModeAdminPassword: domainSafeModeAdminPassword
     activeDirectoryDomainName: activeDirectoryDomainName
+    activeDirectoryNetbiosName: activeDirectoryNetbiosName
     tags: tags
   }
 }
@@ -69,38 +75,40 @@ module azure './modules/azure.bicep' = {
     adminUsername: adminUsername
     adminPassword: adminPassword
     privateDnsZoneName: privateDnsZoneName
+    activeDirectoryDomainName: activeDirectoryDomainName
+    onPremDnsServerIpAddress: onPrem.outputs.domainControllerPrivateIpAddress
     tags: tags
   }
 }
 
-module onPremisesToAzureConnection './modules/vpn-connection.bicep' = {
-  name: 'on-premises-to-azure-vpn-connection'
-  scope: onPremisesResourceGroup
+module onPremToAzureConnection './modules/vpn-connection.bicep' = {
+  name: 'onprem-to-azure-vpn-connection'
+  scope: onPremResourceGroup
   params: {
     location: location
-    connectionName: 'cn-vnet-on-premises-to-vnet-azure'
-    localVirtualNetworkGatewayResourceId: onPremises.outputs.virtualNetworkGatewayResourceId
+    connectionName: 'cn-vnet-onprem-to-vnet-azure'
+    localVirtualNetworkGatewayResourceId: onPrem.outputs.virtualNetworkGatewayResourceId
     remoteVirtualNetworkGatewayResourceId: azure.outputs.virtualNetworkGatewayResourceId
     vpnSharedKey: vpnSharedKey
     tags: tags
   }
 }
 
-module azureToOnPremisesConnection './modules/vpn-connection.bicep' = {
-  name: 'azure-to-on-premises-vpn-connection'
+module azureToOnPremConnection './modules/vpn-connection.bicep' = {
+  name: 'azure-to-onprem-vpn-connection'
   scope: azureResourceGroup
   params: {
     location: location
-    connectionName: 'cn-vnet-azure-to-vnet-on-premises'
+    connectionName: 'cn-vnet-azure-to-vnet-onprem'
     localVirtualNetworkGatewayResourceId: azure.outputs.virtualNetworkGatewayResourceId
-    remoteVirtualNetworkGatewayResourceId: onPremises.outputs.virtualNetworkGatewayResourceId
+    remoteVirtualNetworkGatewayResourceId: onPrem.outputs.virtualNetworkGatewayResourceId
     vpnSharedKey: vpnSharedKey
     tags: tags
   }
 }
 
-output onPremisesVirtualNetworkResourceId string = onPremises.outputs.virtualNetworkResourceId
+output onPremVirtualNetworkResourceId string = onPrem.outputs.virtualNetworkResourceId
 output azureVirtualNetworkResourceId string = azure.outputs.virtualNetworkResourceId
 output privateDnsZoneResourceId string = azure.outputs.privateDnsZoneResourceId
 output dnsResolverInboundEndpointPrivateIpAddress string = azure.outputs.dnsResolverInboundEndpointPrivateIpAddress
-output domainControllerPrivateIpAddress string = onPremises.outputs.domainControllerPrivateIpAddress
+output domainControllerPrivateIpAddress string = onPrem.outputs.domainControllerPrivateIpAddress

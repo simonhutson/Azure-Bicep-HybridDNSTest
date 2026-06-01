@@ -11,12 +11,19 @@ param adminUsername string
 param adminPassword string
 
 @description('Private DNS zone name.')
-param privateDnsZoneName string = 'viridor.local'
+param privateDnsZoneName string = 'contoso.azure'
+
+@description('Active Directory DNS domain name hosted by the simulated on-prem DNS server.')
+param activeDirectoryDomainName string = 'contoso.onprem'
+
+@description('Private IP address of the simulated on-prem DNS server.')
+param onPremDnsServerIpAddress string
 
 @description('Tags applied to deployed resources.')
 param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
+var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 
 var nsgNames = [
   'nsg-zscaler-zpa'
@@ -256,6 +263,47 @@ module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5.7' = {
   }
 }
 
+resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2022-07-01' = {
+  name: 'dnsfrs-azure-to-onprem'
+  location: location
+  properties: {
+    dnsResolverOutboundEndpoints: [
+      {
+        id: resourceId('Microsoft.Network/dnsResolvers/outboundEndpoints', 'dnspr-azure', 'outbound')
+      }
+    ]
+  }
+  tags: tags
+  dependsOn: [
+    dnsResolver
+  ]
+}
+
+resource onPremDnsForwardingRule 'Microsoft.Network/dnsForwardingRulesets/forwardingRules@2022-07-01' = {
+  parent: dnsForwardingRuleset
+  name: 'rule-onprem-ad'
+  properties: {
+    domainName: onPremDnsForwardingDomainName
+    forwardingRuleState: 'Enabled'
+    targetDnsServers: [
+      {
+        ipAddress: onPremDnsServerIpAddress
+        port: 53
+      }
+    ]
+  }
+}
+
+resource dnsForwardingRulesetVirtualNetworkLink 'Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks@2022-07-01' = {
+  parent: dnsForwardingRuleset
+  name: 'link-vnet-azure'
+  properties: {
+    virtualNetwork: {
+      id: virtualNetwork.outputs.resourceId
+    }
+  }
+}
+
 module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
   name: 'pdns-${replace(privateDnsZoneName, '.', '-')}'
   params: {
@@ -280,7 +328,7 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
     location: location
     availabilityZone: -1
     osType: 'Windows'
-    vmSize: 'Standard_B2ms'
+    vmSize: 'Standard_D2ads_v5'
     adminUsername: adminUsername
     adminPassword: adminPassword
     imageReference: {

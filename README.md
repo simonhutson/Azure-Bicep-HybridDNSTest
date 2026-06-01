@@ -4,14 +4,15 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 ## What It Deploys
 
-- Resource groups `rg-on-premises` and `rg-azure`.
-- Simulated on-premises VNet `vnet-on-premises` with address space `10.0.0.0/8`.
+- Resource groups `rg-onprem` and `rg-azure`.
+- Simulated on-prem VNet `vnet-onprem` with address space `10.0.0.0/8`.
 - Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ad` at `10.0.1.4`.
-- Active Directory Domain Services forest and integrated DNS for `viridor.onprem` with NetBIOS name `VIRIDOR`.
+- Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
 - Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` and `vm-azure02` on private-only NICs.
 - Azure DNS Private Resolver with inbound and outbound endpoint subnets.
-- Private DNS zone `viridor.local`, linked to `vnet-azure` with registration enabled.
+- Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
+- Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
@@ -22,7 +23,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - [main.bicep](main.bicep): subscription-scope entry point.
 - [deploy.ps1](deploy.ps1): PowerShell deployment helper.
 - [main.bicepparam](main.bicepparam): optional sample parameters.
-- [modules/on-premises.bicep](modules/on-premises.bicep): simulated on-premises network, Bastion, VPN gateway, and domain controller.
+- [modules/onprem.bicep](modules/onprem.bicep): simulated on-prem network, Bastion, VPN gateway, and domain controller.
 - [modules/azure.bicep](modules/azure.bicep): simulated Azure network, DNS resolver, firewall, Bastion, private DNS zone, and VPN gateway.
 - [modules/vpn-connection.bicep](modules/vpn-connection.bicep): reusable VNet-to-VNet IPsec connection module.
 
@@ -70,6 +71,8 @@ To preview changes:
 ## Notes
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Azure Firewall, DNS Resolver, Private DNS, VPN gateways, gateway connections, and the Windows VM.
+- The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.1.4`.
+- `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
 - The private DNS zone auto-registers only VMs in `vnet-azure`.
 - Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.

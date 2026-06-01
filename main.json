@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "6530071699425796715"
+      "templateHash": "9724091492846693126"
     }
   },
   "parameters": {
@@ -16,11 +16,11 @@
         "description": "Azure region for all resource groups and resources."
       }
     },
-    "onPremisesResourceGroupName": {
+    "onPremResourceGroupName": {
       "type": "string",
-      "defaultValue": "rg-on-premises",
+      "defaultValue": "rg-onprem",
       "metadata": {
-        "description": "Resource group name for the simulated on-premises environment."
+        "description": "Resource group name for the simulated on-prem environment."
       }
     },
     "azureResourceGroupName": {
@@ -57,16 +57,25 @@
     },
     "privateDnsZoneName": {
       "type": "string",
-      "defaultValue": "viridor.local",
+      "defaultValue": "contoso.azure",
       "metadata": {
         "description": "Private DNS zone name for Azure VM registration."
       }
     },
     "activeDirectoryDomainName": {
       "type": "string",
-      "defaultValue": "viridor.onprem",
+      "defaultValue": "contoso.onprem",
       "metadata": {
-        "description": "Active Directory DNS domain name for the simulated on-premises forest."
+        "description": "Active Directory DNS domain name for the simulated on-prem forest."
+      }
+    },
+    "activeDirectoryNetbiosName": {
+      "type": "string",
+      "defaultValue": "CONTOSO",
+      "minLength": 1,
+      "maxLength": 15,
+      "metadata": {
+        "description": "Active Directory NetBIOS name for the simulated on-prem forest."
       }
     },
     "tags": {
@@ -84,7 +93,7 @@
     {
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "2024-03-01",
-      "name": "[parameters('onPremisesResourceGroupName')]",
+      "name": "[parameters('onPremResourceGroupName')]",
       "location": "[parameters('location')]",
       "tags": "[parameters('tags')]"
     },
@@ -98,8 +107,8 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
-      "name": "on-premises-environment",
-      "resourceGroup": "[parameters('onPremisesResourceGroupName')]",
+      "name": "onprem-environment",
+      "resourceGroup": "[parameters('onPremResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -121,6 +130,9 @@
           "activeDirectoryDomainName": {
             "value": "[parameters('activeDirectoryDomainName')]"
           },
+          "activeDirectoryNetbiosName": {
+            "value": "[parameters('activeDirectoryNetbiosName')]"
+          },
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -132,7 +144,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7548769224637427995"
+              "templateHash": "5554024869959942566"
             }
           },
           "parameters": {
@@ -163,9 +175,18 @@
             },
             "activeDirectoryDomainName": {
               "type": "string",
-              "defaultValue": "viridor.onprem",
+              "defaultValue": "contoso.onprem",
               "metadata": {
-                "description": "Active Directory DNS domain name for the simulated on-premises forest."
+                "description": "Active Directory DNS domain name for the simulated on-prem forest."
+              }
+            },
+            "activeDirectoryNetbiosName": {
+              "type": "string",
+              "defaultValue": "CONTOSO",
+              "minLength": 1,
+              "maxLength": 15,
+              "metadata": {
+                "description": "Active Directory NetBIOS name for the simulated on-prem forest."
               }
             },
             "tags": {
@@ -177,11 +198,11 @@
             }
           },
           "variables": {
-            "virtualNetworkName": "vnet-on-premises",
+            "virtualNetworkName": "vnet-onprem",
             "domainControllerName": "vm-onprem01",
             "domainControllerPrivateIpAddress": "10.0.1.4",
             "adSubnetName": "ad",
-            "configureAddsCommand": "[format('powershell.exe -ExecutionPolicy Bypass -Command \"& {{ $safeModePassword = ConvertTo-SecureString `\"{0}`\" -AsPlainText -Force; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Install-ADDSForest -DomainName `\"{1}`\" -DomainNetbiosName VIRIDOR -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force }}\"', parameters('domainSafeModeAdminPassword'), parameters('activeDirectoryDomainName'))]",
+            "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& {{ $ErrorActionPreference = `\"Stop`\"; $domainName = `\"{0}`\"; $netbiosName = `\"{1}`\"; $safeModePassword = ConvertTo-SecureString `\"{2}`\" -AsPlainText -Force; if (Get-Service -Name NTDS -ErrorAction SilentlyContinue) {{ Write-Host `\"Domain controller role already configured.`\"; exit 0 }}; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Import-Module ADDSDeployment; Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion; New-Item -Path C:/AzureData -ItemType Directory -Force | Out-Null; Set-Content -Path C:/AzureData/adds-promotion-requested.txt -Value (Get-Date -Format o); shutdown.exe /r /t 30 /c `\"Completing AD DS forest promotion`\"; exit 0 }}\"', parameters('activeDirectoryDomainName'), parameters('activeDirectoryNetbiosName'), parameters('domainSafeModeAdminPassword'))]",
             "subnetResourceIds": {
               "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]"
             }
@@ -2678,7 +2699,7 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
-              "name": "bas-on-premises-dev",
+              "name": "bas-onprem-dev",
               "properties": {
                 "expressionEvaluationOptions": {
                   "scope": "inner"
@@ -2686,7 +2707,7 @@
                 "mode": "Incremental",
                 "parameters": {
                   "name": {
-                    "value": "bas-on-premises-dev"
+                    "value": "bas-onprem-dev"
                   },
                   "location": {
                     "value": "[parameters('location')]"
@@ -4398,7 +4419,7 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
-              "name": "vgw-on-premises",
+              "name": "vgw-onprem",
               "properties": {
                 "expressionEvaluationOptions": {
                   "scope": "inner"
@@ -4406,7 +4427,7 @@
                 "mode": "Incremental",
                 "parameters": {
                   "name": {
-                    "value": "vgw-on-premises"
+                    "value": "vgw-onprem"
                   },
                   "location": {
                     "value": "[parameters('location')]"
@@ -4424,7 +4445,7 @@
                     "value": "VpnGw1AZ"
                   },
                   "primaryPublicIPName": {
-                    "value": "vgw-on-premises-zonal-pip1"
+                    "value": "vgw-onprem-zonal-pip1"
                   },
                   "publicIpAvailabilityZones": {
                     "value": [
@@ -6796,7 +6817,7 @@
                     "value": "Windows"
                   },
                   "vmSize": {
-                    "value": "Standard_B2ms"
+                    "value": "Standard_D2ads_v5"
                   },
                   "adminUsername": {
                     "value": "[parameters('adminUsername')]"
@@ -16233,7 +16254,7 @@
             },
             "virtualNetworkGatewayResourceId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vgw-on-premises'), '2025-04-01').outputs.resourceId.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vgw-onprem'), '2025-04-01').outputs.resourceId.value]"
             },
             "domainControllerPrivateIpAddress": {
               "type": "string",
@@ -16247,7 +16268,7 @@
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('onPremisesResourceGroupName'))]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('onPremResourceGroupName'))]"
       ]
     },
     {
@@ -16273,6 +16294,12 @@
           "privateDnsZoneName": {
             "value": "[parameters('privateDnsZoneName')]"
           },
+          "activeDirectoryDomainName": {
+            "value": "[parameters('activeDirectoryDomainName')]"
+          },
+          "onPremDnsServerIpAddress": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.domainControllerPrivateIpAddress.value]"
+          },
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -16284,7 +16311,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "12838245133364914479"
+              "templateHash": "5600671652870325282"
             }
           },
           "parameters": {
@@ -16309,9 +16336,22 @@
             },
             "privateDnsZoneName": {
               "type": "string",
-              "defaultValue": "viridor.local",
+              "defaultValue": "contoso.azure",
               "metadata": {
                 "description": "Private DNS zone name."
+              }
+            },
+            "activeDirectoryDomainName": {
+              "type": "string",
+              "defaultValue": "contoso.onprem",
+              "metadata": {
+                "description": "Active Directory DNS domain name hosted by the simulated on-prem DNS server."
+              }
+            },
+            "onPremDnsServerIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Private IP address of the simulated on-prem DNS server."
               }
             },
             "tags": {
@@ -16331,6 +16371,7 @@
               }
             ],
             "virtualNetworkName": "vnet-azure",
+            "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
             "nsgNames": [
               "nsg-zscaler-zpa",
               "nsg-avd01",
@@ -16499,6 +16540,55 @@
               "tags": "[parameters('tags')]",
               "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-afw-azure-standard')]",
+                "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/dnsForwardingRulesets",
+              "apiVersion": "2022-07-01",
+              "name": "dnsfrs-azure-to-onprem",
+              "location": "[parameters('location')]",
+              "properties": {
+                "dnsResolverOutboundEndpoints": [
+                  {
+                    "id": "[resourceId('Microsoft.Network/dnsResolvers/outboundEndpoints', 'dnspr-azure', 'outbound')]"
+                  }
+                ]
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'dnspr-azure')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/dnsForwardingRulesets/forwardingRules",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/{1}', 'dnsfrs-azure-to-onprem', 'rule-onprem-ad')]",
+              "properties": {
+                "domainName": "[variables('onPremDnsForwardingDomainName')]",
+                "forwardingRuleState": "Enabled",
+                "targetDnsServers": [
+                  {
+                    "ipAddress": "[parameters('onPremDnsServerIpAddress')]",
+                    "port": 53
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsForwardingRulesets', 'dnsfrs-azure-to-onprem')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks",
+              "apiVersion": "2022-07-01",
+              "name": "[format('{0}/{1}', 'dnsfrs-azure-to-onprem', 'link-vnet-azure')]",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[reference(resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName')), '2025-04-01').outputs.resourceId.value]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsForwardingRulesets', 'dnsfrs-azure-to-onprem')]",
                 "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
               ]
             },
@@ -24999,7 +25089,7 @@
                     "value": "Windows"
                   },
                   "vmSize": {
-                    "value": "Standard_B2ms"
+                    "value": "Standard_D2ads_v5"
                   },
                   "adminUsername": {
                     "value": "[parameters('adminUsername')]"
@@ -36816,14 +36906,15 @@
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment')]"
       ]
     },
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
-      "name": "on-premises-to-azure-vpn-connection",
-      "resourceGroup": "[parameters('onPremisesResourceGroupName')]",
+      "name": "onprem-to-azure-vpn-connection",
+      "resourceGroup": "[parameters('onPremResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -36834,10 +36925,10 @@
             "value": "[parameters('location')]"
           },
           "connectionName": {
-            "value": "cn-vnet-on-premises-to-vnet-azure"
+            "value": "cn-vnet-onprem-to-vnet-azure"
           },
           "localVirtualNetworkGatewayResourceId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
           },
           "remoteVirtualNetworkGatewayResourceId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
@@ -37480,14 +37571,14 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('onPremisesResourceGroupName'))]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('onPremResourceGroupName'))]"
       ]
     },
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
-      "name": "azure-to-on-premises-vpn-connection",
+      "name": "azure-to-onprem-vpn-connection",
       "resourceGroup": "[parameters('azureResourceGroupName')]",
       "properties": {
         "expressionEvaluationOptions": {
@@ -37499,13 +37590,13 @@
             "value": "[parameters('location')]"
           },
           "connectionName": {
-            "value": "cn-vnet-azure-to-vnet-on-premises"
+            "value": "cn-vnet-azure-to-vnet-onprem"
           },
           "localVirtualNetworkGatewayResourceId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
           },
           "remoteVirtualNetworkGatewayResourceId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.virtualNetworkGatewayResourceId.value]"
           },
           "vpnSharedKey": {
             "value": "[parameters('vpnSharedKey')]"
@@ -38146,14 +38237,14 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment')]"
       ]
     }
   ],
   "outputs": {
-    "onPremisesVirtualNetworkResourceId": {
+    "onPremVirtualNetworkResourceId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.virtualNetworkResourceId.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.virtualNetworkResourceId.value]"
     },
     "azureVirtualNetworkResourceId": {
       "type": "string",
@@ -38169,7 +38260,7 @@
     },
     "domainControllerPrivateIpAddress": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremisesResourceGroupName')), 'Microsoft.Resources/deployments', 'on-premises-environment'), '2025-04-01').outputs.domainControllerPrivateIpAddress.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.domainControllerPrivateIpAddress.value]"
     }
   }
 }

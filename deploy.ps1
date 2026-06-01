@@ -3,10 +3,12 @@ param(
     [string]$Location = 'swedencentral',
     [string]$DeploymentName = ('hybrid-dns-{0:yyyyMMdd-HHmmss}' -f (Get-Date)),
     [string]$TemplateFile = (Join-Path $PSScriptRoot 'main.bicep'),
-    [string]$OnPremisesResourceGroupName = 'rg-on-premises',
+    [string]$OnPremResourceGroupName = 'rg-onprem',
     [string]$AzureResourceGroupName = 'rg-azure',
     [string]$AdminUsername = 'azureadmin',
-    [string]$PrivateDnsZoneName = 'viridor.local',
+    [string]$PrivateDnsZoneName = 'contoso.azure',
+    [ValidateLength(1, 15)]
+    [string]$ActiveDirectoryNetbiosName = 'CONTOSO',
     [string]$SubscriptionId = $env:AZURE_SUBSCRIPTION_ID,
     [securestring]$AdminPassword,
     [securestring]$DomainSafeModeAdminPassword,
@@ -124,13 +126,14 @@ try {
         contentVersion = '1.0.0.0'
         parameters = [ordered]@{
             location = @{ value = $Location }
-            onPremisesResourceGroupName = @{ value = $OnPremisesResourceGroupName }
+            onPremResourceGroupName = @{ value = $OnPremResourceGroupName }
             azureResourceGroupName = @{ value = $AzureResourceGroupName }
             adminUsername = @{ value = $AdminUsername }
             adminPassword = @{ value = (ConvertTo-PlainText -SecureValue $AdminPassword) }
             domainSafeModeAdminPassword = @{ value = (ConvertTo-PlainText -SecureValue $DomainSafeModeAdminPassword) }
             vpnSharedKey = @{ value = (ConvertTo-PlainText -SecureValue $VpnSharedKey) }
             privateDnsZoneName = @{ value = $PrivateDnsZoneName }
+            activeDirectoryNetbiosName = @{ value = $ActiveDirectoryNetbiosName }
             tags = @{
                 value = @{
                     workload = 'hybrid-dns-test'

@@ -1,14 +1,15 @@
 using 'main.bicep'
 
 param location = 'swedencentral'
-param onPremisesResourceGroupName = 'rg-on-premises'
+param onPremResourceGroupName = 'rg-onprem'
 param azureResourceGroupName = 'rg-azure'
 param adminUsername = 'azureadmin'
 param adminPassword = readEnvironmentVariable('ADMIN_PASSWORD', '')
 param domainSafeModeAdminPassword = readEnvironmentVariable('DOMAIN_SAFE_MODE_ADMIN_PASSWORD', '')
 param vpnSharedKey = readEnvironmentVariable('VPN_SHARED_KEY', '')
-param privateDnsZoneName = 'viridor.local'
-param activeDirectoryDomainName = 'viridor.onprem'
+param privateDnsZoneName = 'contoso.azure'
+param activeDirectoryDomainName = 'contoso.onprem'
+param activeDirectoryNetbiosName = 'CONTOSO'
 param tags = {
   workload: 'hybrid-dns-test'
   environment: 'lab'
