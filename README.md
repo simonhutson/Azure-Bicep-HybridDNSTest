@@ -14,6 +14,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
+- Route tables that force requested Azure subnet-to-subnet, Internet, and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
 - No VM NIC creates or attaches a public IP address.
@@ -53,7 +54,7 @@ az login
 The script prompts for the secure values, validates the subscription-scope deployment, and then starts the deployment. It uses the current Azure CLI subscription unless `-SubscriptionId` or the `AZURE_SUBSCRIPTION_ID` environment variable is provided. The location defaults to `swedencentral` and can be overridden:
 
 ```powershell
-.\deploy.ps1 -Location uksouth -SubscriptionId '<subscription-id>'
+.\deploy.ps1 -Location swedencentral -SubscriptionId '<subscription-id>'
 ```
 
 To validate without deploying:

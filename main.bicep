@@ -1,7 +1,7 @@
 targetScope = 'subscription'
 
 @description('Azure region for all resource groups and resources.')
-param location string = 'uksouth'
+param location string = 'swedencentral'
 
 @description('Resource group name for the simulated on-prem environment.')
 param onPremResourceGroupName string = 'rg-onprem'
@@ -81,6 +81,17 @@ module azure './modules/azure.bicep' = {
   }
 }
 
+module onPremRoutes './modules/onprem-routes.bicep' = {
+  name: 'onprem-route-tables'
+  scope: onPremResourceGroup
+  params: {
+    location: location
+    azureFirewallPrivateIpAddress: azure.outputs.azureFirewallPrivateIpAddress
+    azureFirewallTransitRoutes: azure.outputs.firewallTransitAzureRoutes
+    tags: tags
+  }
+}
+
 module onPremToAzureConnection './modules/vpn-connection.bicep' = {
   name: 'onprem-to-azure-vpn-connection'
   scope: onPremResourceGroup
@@ -112,3 +123,4 @@ output azureVirtualNetworkResourceId string = azure.outputs.virtualNetworkResour
 output privateDnsZoneResourceId string = azure.outputs.privateDnsZoneResourceId
 output dnsResolverInboundEndpointPrivateIpAddress string = azure.outputs.dnsResolverInboundEndpointPrivateIpAddress
 output domainControllerPrivateIpAddress string = onPrem.outputs.domainControllerPrivateIpAddress
+output onPremRouteTableResourceId string = onPremRoutes.outputs.routeTableResourceId

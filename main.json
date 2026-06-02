@@ -5,13 +5,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "13497378505929993376"
+      "templateHash": "10740884780055192737"
     }
   },
   "parameters": {
     "location": {
       "type": "string",
-      "defaultValue": "uksouth",
+      "defaultValue": "swedencentral",
       "metadata": {
         "description": "Azure region for all resource groups and resources."
       }
@@ -144,7 +144,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7353414172753294319"
+              "templateHash": "14213895486570293405"
             }
           },
           "parameters": {
@@ -6840,7 +6840,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "StandardSSD_LRS"
+                        "storageAccountType": "Standard_LRS"
                       }
                     }
                   },
@@ -16313,7 +16313,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "8993004911509122724"
+              "templateHash": "9758953639610315633"
             }
           },
           "parameters": {
@@ -16367,6 +16367,11 @@
           "variables": {
             "copy": [
               {
+                "name": "firewallTransitAzureAddressPrefixes",
+                "count": "[length(variables('firewallTransitAzureRoutes'))]",
+                "input": "[variables('firewallTransitAzureRoutes')[copyIndex('firewallTransitAzureAddressPrefixes')].addressPrefix]"
+              },
+              {
                 "name": "customSubnetDefinitions",
                 "count": "[length(variables('customSubnets'))]",
                 "input": "[union(createObject('name', variables('customSubnets')[copyIndex('customSubnetDefinitions')].name, 'addressPrefix', variables('customSubnets')[copyIndex('customSubnetDefinitions')].addressPrefix), if(empty(variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName), createObject(), createObject('networkSecurityGroupResourceId', resourceId('Microsoft.Network/networkSecurityGroups', variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName))))]"
@@ -16374,7 +16379,162 @@
             ],
             "virtualNetworkName": "vnet-azure",
             "dnsResolverInboundEndpointPrivateIpAddress": "172.19.2.4",
+            "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
+            "firewallTransitAzureRoutes": [
+              {
+                "name": "to-zscaler-zpa",
+                "addressPrefix": "172.19.60.0/28"
+              },
+              {
+                "name": "to-avd01",
+                "addressPrefix": "172.19.40.0/24"
+              },
+              {
+                "name": "to-live",
+                "addressPrefix": "172.19.20.0/23"
+              },
+              {
+                "name": "to-dhcp",
+                "addressPrefix": "172.19.15.0/28"
+              },
+              {
+                "name": "to-unisim",
+                "addressPrefix": "172.19.14.0/28"
+              },
+              {
+                "name": "to-utilities",
+                "addressPrefix": "172.19.10.0/23"
+              }
+            ],
+            "azureFirewallRouteTableDefinitions": [
+              {
+                "name": "rt-zscaler-zpa",
+                "subnetName": "zscaler-zpa",
+                "subnetAddressPrefix": "172.19.60.0/28",
+                "networkSecurityGroupName": "nsg-zscaler-zpa",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]"
+                ]
+              },
+              {
+                "name": "rt-avd01",
+                "subnetName": "avd01",
+                "subnetAddressPrefix": "172.19.40.0/24",
+                "networkSecurityGroupName": "nsg-avd01",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]"
+                ]
+              },
+              {
+                "name": "rt-live",
+                "subnetName": "live",
+                "subnetAddressPrefix": "172.19.20.0/23",
+                "networkSecurityGroupName": "nsg-live",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]"
+                ]
+              },
+              {
+                "name": "rt-dhcp",
+                "subnetName": "dhcp",
+                "subnetAddressPrefix": "172.19.15.0/28",
+                "networkSecurityGroupName": "nsg-dhcp",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]"
+                ]
+              },
+              {
+                "name": "rt-unisim",
+                "subnetName": "unisim",
+                "subnetAddressPrefix": "172.19.14.0/28",
+                "networkSecurityGroupName": "nsg-unisim",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]"
+                ]
+              },
+              {
+                "name": "rt-utilities",
+                "subnetName": "utilities",
+                "subnetAddressPrefix": "172.19.10.0/23",
+                "networkSecurityGroupName": "nsg-utilities",
+                "routes": [
+                  {
+                    "name": "default-to-azure-firewall",
+                    "addressPrefix": "0.0.0.0/0"
+                  },
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]"
+                ]
+              }
+            ],
             "nsgNames": [
               "nsg-zscaler-zpa",
               "nsg-avd01",
@@ -16516,6 +16676,79 @@
               "tags": "[parameters('tags')]"
             },
             {
+              "type": "Microsoft.Network/firewallPolicies",
+              "apiVersion": "2023-11-01",
+              "name": "afwp-azure-standard",
+              "location": "[parameters('location')]",
+              "properties": {
+                "threatIntelMode": "Deny"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', 'afwp-azure-standard', 'DefaultNetworkRuleCollectionGroup')]",
+              "properties": {
+                "priority": 100,
+                "ruleCollections": [
+                  {
+                    "name": "AllowHybridSubnetTraffic",
+                    "priority": 100,
+                    "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                    "action": {
+                      "type": "Allow"
+                    },
+                    "rules": [
+                      {
+                        "name": "AllowRequestedAzureSubnets",
+                        "ruleType": "NetworkRule",
+                        "ipProtocols": [
+                          "Any"
+                        ],
+                        "sourceAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
+                        "destinationAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
+                        "destinationPorts": [
+                          "*"
+                        ]
+                      },
+                      {
+                        "name": "AllowAzureSubnetsToOnPrem",
+                        "ruleType": "NetworkRule",
+                        "ipProtocols": [
+                          "Any"
+                        ],
+                        "sourceAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
+                        "destinationAddresses": [
+                          "[variables('onPremVirtualNetworkAddressPrefix')]"
+                        ],
+                        "destinationPorts": [
+                          "*"
+                        ]
+                      },
+                      {
+                        "name": "AllowOnPremToAzureSubnets",
+                        "ruleType": "NetworkRule",
+                        "ipProtocols": [
+                          "Any"
+                        ],
+                        "sourceAddresses": [
+                          "[variables('onPremVirtualNetworkAddressPrefix')]"
+                        ],
+                        "destinationAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
+                        "destinationPorts": [
+                          "*"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies', 'afwp-azure-standard')]"
+              ]
+            },
+            {
               "type": "Microsoft.Network/azureFirewalls",
               "apiVersion": "2023-11-01",
               "name": "afw-azure-standard",
@@ -16526,6 +16759,9 @@
                   "tier": "Standard"
                 },
                 "threatIntelMode": "Deny",
+                "firewallPolicy": {
+                  "id": "[resourceId('Microsoft.Network/firewallPolicies', 'afwp-azure-standard')]"
+                },
                 "ipConfigurations": [
                   {
                     "name": "pip-afw-azure-standard",
@@ -16542,8 +16778,61 @@
               },
               "tags": "[parameters('tags')]",
               "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies', 'afwp-azure-standard')]",
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-afw-azure-standard')]",
                 "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "azureFirewallRouteTables",
+                "count": "[length(variables('azureFirewallRouteTableDefinitions'))]"
+              },
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('azureFirewallRouteTableDefinitions')[copyIndex()].name]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "routes",
+                    "count": "[length(variables('azureFirewallRouteTableDefinitions')[copyIndex()].routes)]",
+                    "input": {
+                      "name": "[variables('azureFirewallRouteTableDefinitions')[copyIndex()].routes[copyIndex('routes')].name]",
+                      "properties": {
+                        "addressPrefix": "[variables('azureFirewallRouteTableDefinitions')[copyIndex()].routes[copyIndex('routes')].addressPrefix]",
+                        "nextHopType": "VirtualAppliance",
+                        "nextHopIpAddress": "[reference(resourceId('Microsoft.Network/azureFirewalls', 'afw-azure-standard'), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+                      }
+                    }
+                  }
+                ],
+                "disableBgpRoutePropagation": false
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/azureFirewalls', 'afw-azure-standard')]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "azureFirewallRouteTableSubnetAssociations",
+                "count": "[length(variables('azureFirewallRouteTableDefinitions'))]"
+              },
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', variables('virtualNetworkName'), variables('azureFirewallRouteTableDefinitions')[copyIndex()].subnetName)]",
+              "properties": {
+                "addressPrefix": "[variables('azureFirewallRouteTableDefinitions')[copyIndex()].subnetAddressPrefix]",
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('azureFirewallRouteTableDefinitions')[copyIndex()].networkSecurityGroupName)]"
+                },
+                "routeTable": {
+                  "id": "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]"
               ]
             },
             {
@@ -24298,7 +24587,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "StandardSSD_LRS"
+                        "storageAccountType": "Standard_LRS"
                       }
                     }
                   },
@@ -36085,6 +36374,10 @@
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Network/azureFirewalls', 'afw-azure-standard'), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
             },
+            "firewallTransitAzureRoutes": {
+              "type": "array",
+              "value": "[variables('firewallTransitAzureRoutes')]"
+            },
             "dnsResolverInboundEndpointPrivateIpAddress": {
               "type": "string",
               "value": "[variables('dnsResolverInboundEndpointPrivateIpAddress')]"
@@ -36095,6 +36388,130 @@
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('azureResourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "onprem-route-tables",
+      "resourceGroup": "[parameters('onPremResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "azureFirewallPrivateIpAddress": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.azureFirewallPrivateIpAddress.value]"
+          },
+          "azureFirewallTransitRoutes": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.firewallTransitAzureRoutes.value]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "11106499825755403194"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Azure region for resources."
+              }
+            },
+            "azureFirewallPrivateIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Private IP address of the Azure Firewall used as the next hop for on-prem routes to Azure subnets."
+              }
+            },
+            "azureFirewallTransitRoutes": {
+              "type": "array",
+              "metadata": {
+                "description": "Azure subnet routes that should be reachable from the simulated on-prem subnet through Azure Firewall."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to deployed resources."
+              }
+            }
+          },
+          "variables": {
+            "virtualNetworkName": "vnet-onprem",
+            "adSubnetName": "ad",
+            "adSubnetAddressPrefix": "10.0.1.0/24",
+            "adNetworkSecurityGroupName": "nsg-ad"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-11-01",
+              "name": "rt-onprem-ad-to-azure-firewall",
+              "location": "[parameters('location')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "routes",
+                    "count": "[length(parameters('azureFirewallTransitRoutes'))]",
+                    "input": {
+                      "name": "[parameters('azureFirewallTransitRoutes')[copyIndex('routes')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('azureFirewallTransitRoutes')[copyIndex('routes')].addressPrefix]",
+                        "nextHopType": "VirtualAppliance",
+                        "nextHopIpAddress": "[parameters('azureFirewallPrivateIpAddress')]"
+                      }
+                    }
+                  }
+                ],
+                "disableBgpRoutePropagation": false
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', variables('virtualNetworkName'), variables('adSubnetName'))]",
+              "properties": {
+                "addressPrefix": "[variables('adSubnetAddressPrefix')]",
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('adNetworkSecurityGroupName'))]"
+                },
+                "routeTable": {
+                  "id": "[resourceId('Microsoft.Network/routeTables', 'rt-onprem-ad-to-azure-firewall')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', 'rt-onprem-ad-to-azure-firewall')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "routeTableResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/routeTables', 'rt-onprem-ad-to-azure-firewall')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('onPremResourceGroupName'))]"
       ]
     },
     {
@@ -37448,6 +37865,10 @@
     "domainControllerPrivateIpAddress": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.domainControllerPrivateIpAddress.value]"
+    },
+    "onPremRouteTableResourceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-route-tables'), '2025-04-01').outputs.routeTableResourceId.value]"
     }
   }
 }

@@ -27,6 +27,164 @@ var dnsResolverInboundEndpointPrivateIpAddress = '172.19.2.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 
+var firewallTransitAzureRoutes = [
+  {
+    name: 'to-zscaler-zpa'
+    addressPrefix: '172.19.60.0/28'
+  }
+  {
+    name: 'to-avd01'
+    addressPrefix: '172.19.40.0/24'
+  }
+  {
+    name: 'to-live'
+    addressPrefix: '172.19.20.0/23'
+  }
+  {
+    name: 'to-dhcp'
+    addressPrefix: '172.19.15.0/28'
+  }
+  {
+    name: 'to-unisim'
+    addressPrefix: '172.19.14.0/28'
+  }
+  {
+    name: 'to-utilities'
+    addressPrefix: '172.19.10.0/23'
+  }
+]
+
+var firewallTransitAzureAddressPrefixes = [for route in firewallTransitAzureRoutes: route.addressPrefix]
+
+var azureFirewallRouteTableDefinitions = [
+  {
+    name: 'rt-zscaler-zpa'
+    subnetName: 'zscaler-zpa'
+    subnetAddressPrefix: '172.19.60.0/28'
+    networkSecurityGroupName: 'nsg-zscaler-zpa'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+    ]
+  }
+  {
+    name: 'rt-avd01'
+    subnetName: 'avd01'
+    subnetAddressPrefix: '172.19.40.0/24'
+    networkSecurityGroupName: 'nsg-avd01'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+    ]
+  }
+  {
+    name: 'rt-live'
+    subnetName: 'live'
+    subnetAddressPrefix: '172.19.20.0/23'
+    networkSecurityGroupName: 'nsg-live'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+    ]
+  }
+  {
+    name: 'rt-dhcp'
+    subnetName: 'dhcp'
+    subnetAddressPrefix: '172.19.15.0/28'
+    networkSecurityGroupName: 'nsg-dhcp'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+    ]
+  }
+  {
+    name: 'rt-unisim'
+    subnetName: 'unisim'
+    subnetAddressPrefix: '172.19.14.0/28'
+    networkSecurityGroupName: 'nsg-unisim'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[5]
+    ]
+  }
+  {
+    name: 'rt-utilities'
+    subnetName: 'utilities'
+    subnetAddressPrefix: '172.19.10.0/23'
+    networkSecurityGroupName: 'nsg-utilities'
+    routes: [
+      {
+        name: 'default-to-azure-firewall'
+        addressPrefix: '0.0.0.0/0'
+      }
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+    ]
+  }
+]
+
 var nsgNames = [
   'nsg-zscaler-zpa'
   'nsg-avd01'
@@ -123,15 +281,6 @@ var customSubnetDefinitions = [for subnet in customSubnets: union({
 }, empty(subnet.nsgName) ? {} : {
   networkSecurityGroupResourceId: resourceId('Microsoft.Network/networkSecurityGroups', subnet.nsgName)
 })]
-
-var firewallTransitAzureAddressPrefixes = [
-  '172.19.60.0/28'
-  '172.19.40.0/24'
-  '172.19.20.0/23'
-  '172.19.15.0/28'
-  '172.19.14.0/28'
-  '172.19.10.0/23'
-]
 
 var platformSubnetDefinitions = [
   {
@@ -322,6 +471,36 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-11-01' = {
   tags: tags
 }
 
+resource azureFirewallRouteTables 'Microsoft.Network/routeTables@2023-11-01' = [for routeTable in azureFirewallRouteTableDefinitions: {
+  name: routeTable.name
+  location: location
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [for route in routeTable.routes: {
+      name: route.name
+      properties: {
+        addressPrefix: route.addressPrefix
+        nextHopType: 'VirtualAppliance'
+        nextHopIpAddress: azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
+      }
+    }]
+  }
+  tags: tags
+}]
+
+resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = [for (routeTable, routeTableIndex) in azureFirewallRouteTableDefinitions: {
+  name: '${virtualNetworkName}/${routeTable.subnetName}'
+  properties: {
+    addressPrefix: routeTable.subnetAddressPrefix
+    networkSecurityGroup: {
+      id: resourceId('Microsoft.Network/networkSecurityGroups', routeTable.networkSecurityGroupName)
+    }
+    routeTable: {
+      id: azureFirewallRouteTables[routeTableIndex].id
+    }
+  }
+}]
+
 resource dnsResolver 'Microsoft.Network/dnsResolvers@2025-05-01' = {
   name: 'dnspr-azure'
   location: location
@@ -439,7 +618,7 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
       createOption: 'FromImage'
       deleteOption: 'Delete'
       managedDisk: {
-        storageAccountType: 'StandardSSD_LRS'
+        storageAccountType: 'Standard_LRS'
       }
     }
     nicConfigurations: [
@@ -498,4 +677,5 @@ output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
+output firewallTransitAzureRoutes array = firewallTransitAzureRoutes
 output dnsResolverInboundEndpointPrivateIpAddress string = dnsResolverInboundEndpointPrivateIpAddress
