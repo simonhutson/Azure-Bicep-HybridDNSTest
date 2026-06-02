@@ -24,6 +24,7 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
 var dnsResolverInboundEndpointPrivateIpAddress = '172.19.2.4'
+var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 
 var nsgNames = [
@@ -123,6 +124,15 @@ var customSubnetDefinitions = [for subnet in customSubnets: union({
   networkSecurityGroupResourceId: resourceId('Microsoft.Network/networkSecurityGroups', subnet.nsgName)
 })]
 
+var firewallTransitAzureAddressPrefixes = [
+  '172.19.60.0/28'
+  '172.19.40.0/24'
+  '172.19.20.0/23'
+  '172.19.15.0/28'
+  '172.19.14.0/28'
+  '172.19.10.0/23'
+]
+
 var platformSubnetDefinitions = [
   {
     name: 'dns-resolver-inbound'
@@ -214,6 +224,75 @@ resource azureFirewallPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' 
   tags: tags
 }
 
+resource azureFirewallPolicy 'Microsoft.Network/firewallPolicies@2023-11-01' = {
+  name: 'afwp-azure-standard'
+  location: location
+  properties: {
+    threatIntelMode: 'Deny'
+  }
+  tags: tags
+}
+
+resource azureFirewallPolicyRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-11-01' = {
+  parent: azureFirewallPolicy
+  name: 'DefaultNetworkRuleCollectionGroup'
+  properties: {
+    priority: 100
+    ruleCollections: [
+      {
+        name: 'AllowHybridSubnetTraffic'
+        priority: 100
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        action: {
+          type: 'Allow'
+        }
+        rules: [
+          {
+            name: 'AllowRequestedAzureSubnets'
+            ruleType: 'NetworkRule'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: firewallTransitAzureAddressPrefixes
+            destinationAddresses: firewallTransitAzureAddressPrefixes
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            name: 'AllowAzureSubnetsToOnPrem'
+            ruleType: 'NetworkRule'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: firewallTransitAzureAddressPrefixes
+            destinationAddresses: [
+              onPremVirtualNetworkAddressPrefix
+            ]
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            name: 'AllowOnPremToAzureSubnets'
+            ruleType: 'NetworkRule'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              onPremVirtualNetworkAddressPrefix
+            ]
+            destinationAddresses: firewallTransitAzureAddressPrefixes
+            destinationPorts: [
+              '*'
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+
 resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-11-01' = {
   name: 'afw-azure-standard'
   location: location
@@ -223,6 +302,9 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-11-01' = {
       tier: 'Standard'
     }
     threatIntelMode: 'Deny'
+    firewallPolicy: {
+      id: azureFirewallPolicy.id
+    }
     ipConfigurations: [
       {
         name: 'pip-afw-azure-standard'
