@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "9724091492846693126"
+      "templateHash": "13497378505929993376"
     }
   },
   "parameters": {
@@ -144,7 +144,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "5554024869959942566"
+              "templateHash": "7353414172753294319"
             }
           },
           "parameters": {
@@ -202,6 +202,7 @@
             "domainControllerName": "vm-onprem01",
             "domainControllerPrivateIpAddress": "10.0.1.4",
             "adSubnetName": "ad",
+            "addsConfigurationVersion": "2026-06-02.1",
             "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& {{ $ErrorActionPreference = `\"Stop`\"; $domainName = `\"{0}`\"; $netbiosName = `\"{1}`\"; $safeModePassword = ConvertTo-SecureString `\"{2}`\" -AsPlainText -Force; if (Get-Service -Name NTDS -ErrorAction SilentlyContinue) {{ Write-Host `\"Domain controller role already configured.`\"; exit 0 }}; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Import-Module ADDSDeployment; Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion; New-Item -Path C:/AzureData -ItemType Directory -Force | Out-Null; Set-Content -Path C:/AzureData/adds-promotion-requested.txt -Value (Get-Date -Format o); shutdown.exe /r /t 30 /c `\"Completing AD DS forest promotion`\"; exit 0 }}\"', parameters('activeDirectoryDomainName'), parameters('activeDirectoryNetbiosName'), parameters('domainSafeModeAdminPassword'))]",
             "subnetResourceIds": {
               "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]"
@@ -6877,6 +6878,7 @@
                     "value": {
                       "name": "configure-adds-dns",
                       "typeHandlerVersion": "1.10",
+                      "forceUpdateTag": "[variables('addsConfigurationVersion')]",
                       "protectedSettings": {
                         "commandToExecute": "[variables('configureAddsCommand')]"
                       }
@@ -16311,7 +16313,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "5600671652870325282"
+              "templateHash": "8993004911509122724"
             }
           },
           "parameters": {
@@ -16371,6 +16373,7 @@
               }
             ],
             "virtualNetworkName": "vnet-azure",
+            "dnsResolverInboundEndpointPrivateIpAddress": "172.19.2.4",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
             "nsgNames": [
               "nsg-zscaler-zpa",
@@ -16544,6 +16547,57 @@
               ]
             },
             {
+              "type": "Microsoft.Network/dnsResolvers",
+              "apiVersion": "2025-05-01",
+              "name": "dnspr-azure",
+              "location": "[parameters('location')]",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[reference(resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName')), '2025-04-01').outputs.resourceId.value]"
+                }
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/dnsResolvers/inboundEndpoints",
+              "apiVersion": "2025-05-01",
+              "name": "[format('{0}/{1}', 'dnspr-azure', 'inbound')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "subnet": {
+                      "id": "[variables('subnetResourceIds').dnsResolverInbound]"
+                    },
+                    "privateIpAddress": "[variables('dnsResolverInboundEndpointPrivateIpAddress')]",
+                    "privateIpAllocationMethod": "Static"
+                  }
+                ]
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsResolvers', 'dnspr-azure')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/dnsResolvers/outboundEndpoints",
+              "apiVersion": "2025-05-01",
+              "name": "[format('{0}/{1}', 'dnspr-azure', 'outbound')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[variables('subnetResourceIds').dnsResolverOutbound]"
+                }
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsResolvers', 'dnspr-azure')]"
+              ]
+            },
+            {
               "type": "Microsoft.Network/dnsForwardingRulesets",
               "apiVersion": "2022-07-01",
               "name": "dnsfrs-azure-to-onprem",
@@ -16557,7 +16611,7 @@
               },
               "tags": "[parameters('tags')]",
               "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments', 'dnspr-azure')]"
+                "[resourceId('Microsoft.Network/dnsResolvers/outboundEndpoints', 'dnspr-azure', 'outbound')]"
               ]
             },
             {
@@ -20781,873 +20835,6 @@
                         "description": "The Public IPconfiguration object for the AzureBastionSubnet."
                       },
                       "value": "[if(equals(parameters('skuName'), 'Developer'), createObject(), reference('azureBastion').ipConfigurations[0])]"
-                    }
-                  }
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Resources/deployments",
-              "apiVersion": "2025-04-01",
-              "name": "dnspr-azure",
-              "properties": {
-                "expressionEvaluationOptions": {
-                  "scope": "inner"
-                },
-                "mode": "Incremental",
-                "parameters": {
-                  "name": {
-                    "value": "dnspr-azure"
-                  },
-                  "location": {
-                    "value": "[parameters('location')]"
-                  },
-                  "virtualNetworkResourceId": {
-                    "value": "[reference(resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName')), '2025-04-01').outputs.resourceId.value]"
-                  },
-                  "inboundEndpoints": {
-                    "value": [
-                      {
-                        "name": "inbound",
-                        "subnetResourceId": "[variables('subnetResourceIds').dnsResolverInbound]",
-                        "privateIpAllocationMethod": "Dynamic"
-                      }
-                    ]
-                  },
-                  "outboundEndpoints": {
-                    "value": [
-                      {
-                        "name": "outbound",
-                        "subnetResourceId": "[variables('subnetResourceIds').dnsResolverOutbound]"
-                      }
-                    ]
-                  },
-                  "enableTelemetry": {
-                    "value": false
-                  },
-                  "tags": {
-                    "value": "[parameters('tags')]"
-                  }
-                },
-                "template": {
-                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                  "languageVersion": "2.0",
-                  "contentVersion": "1.0.0.0",
-                  "metadata": {
-                    "_generator": {
-                      "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "2056369817897631643"
-                    },
-                    "name": "DNS Resolver",
-                    "description": "This module deploys a DNS Resolver."
-                  },
-                  "definitions": {
-                    "inboundEndpointType": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. Name of the inbound endpoint."
-                          }
-                        },
-                        "subnetResourceId": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. The reference to the subnet bound to the IP configuration."
-                          }
-                        },
-                        "tags": {
-                          "type": "object",
-                          "metadata": {
-                            "__bicep_resource_derived_type!": {
-                              "source": "Microsoft.Network/dnsResolvers/inboundEndpoints@2025-05-01#properties/tags"
-                            },
-                            "description": "Optional. Tags for the resource."
-                          },
-                          "nullable": true
-                        },
-                        "location": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Location for all resources."
-                          }
-                        },
-                        "privateIpAddress": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Private IP address of the IP configuration."
-                          }
-                        },
-                        "privateIpAllocationMethod": {
-                          "type": "string",
-                          "allowedValues": [
-                            "Dynamic",
-                            "Static"
-                          ],
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Private IP address allocation method."
-                          }
-                        }
-                      },
-                      "metadata": {
-                        "__bicep_export!": true,
-                        "description": "The type for the inbound endpoint."
-                      }
-                    },
-                    "outboundEndpointType": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. Name of the outbound endpoint."
-                          }
-                        },
-                        "subnetResourceId": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. ResourceId of the subnet to attach the outbound endpoint to."
-                          }
-                        },
-                        "tags": {
-                          "type": "object",
-                          "metadata": {
-                            "__bicep_resource_derived_type!": {
-                              "source": "Microsoft.Network/dnsResolvers/outboundEndpoints@2025-05-01#properties/tags"
-                            },
-                            "description": "Optional. Tags of the resource."
-                          },
-                          "nullable": true
-                        },
-                        "location": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Location for all resources."
-                          }
-                        }
-                      },
-                      "metadata": {
-                        "__bicep_export!": true,
-                        "description": "The type for the outbound endpoint."
-                      }
-                    },
-                    "endpointDetailsType": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "The name of the resource."
-                          }
-                        },
-                        "resourceId": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "The resource ID of the resource."
-                          }
-                        }
-                      },
-                      "metadata": {
-                        "__bicep_export!": true,
-                        "description": "The type for an endpoint details."
-                      }
-                    },
-                    "lockType": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Specify the name of lock."
-                          }
-                        },
-                        "kind": {
-                          "type": "string",
-                          "allowedValues": [
-                            "CanNotDelete",
-                            "None",
-                            "ReadOnly"
-                          ],
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Specify the type of lock."
-                          }
-                        },
-                        "notes": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Specify the notes of the lock."
-                          }
-                        }
-                      },
-                      "metadata": {
-                        "description": "An AVM-aligned type for a lock.",
-                        "__bicep_imported_from!": {
-                          "sourceTemplate": "br:mcr.microsoft.com/bicep/avm/utl/types/avm-common-types:0.6.1"
-                        }
-                      }
-                    },
-                    "roleAssignmentType": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. The name (as GUID) of the role assignment. If not provided, a GUID will be generated."
-                          }
-                        },
-                        "roleDefinitionIdOrName": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. The role to assign. You can provide either the display name of the role definition, the role definition GUID, or its fully qualified ID in the following format: '/providers/Microsoft.Authorization/roleDefinitions/c2f4ef07-c644-48eb-af81-4b1b4947fb11'."
-                          }
-                        },
-                        "principalId": {
-                          "type": "string",
-                          "metadata": {
-                            "description": "Required. The principal ID of the principal (user/group/identity) to assign the role to."
-                          }
-                        },
-                        "principalType": {
-                          "type": "string",
-                          "allowedValues": [
-                            "Device",
-                            "ForeignGroup",
-                            "Group",
-                            "ServicePrincipal",
-                            "User"
-                          ],
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. The principal type of the assigned principal ID."
-                          }
-                        },
-                        "description": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. The description of the role assignment."
-                          }
-                        },
-                        "condition": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. The conditions on the role assignment. This limits the resources it can be assigned to. e.g.: @Resource[Microsoft.Storage/storageAccounts/blobServices/containers:ContainerName] StringEqualsIgnoreCase \"foo_storage_container\"."
-                          }
-                        },
-                        "conditionVersion": {
-                          "type": "string",
-                          "allowedValues": [
-                            "2.0"
-                          ],
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. Version of the condition."
-                          }
-                        },
-                        "delegatedManagedIdentityResourceId": {
-                          "type": "string",
-                          "nullable": true,
-                          "metadata": {
-                            "description": "Optional. The Resource Id of the delegated managed identity resource."
-                          }
-                        }
-                      },
-                      "metadata": {
-                        "description": "An AVM-aligned type for a role assignment.",
-                        "__bicep_imported_from!": {
-                          "sourceTemplate": "br:mcr.microsoft.com/bicep/avm/utl/types/avm-common-types:0.6.1"
-                        }
-                      }
-                    }
-                  },
-                  "parameters": {
-                    "name": {
-                      "type": "string",
-                      "minLength": 1,
-                      "metadata": {
-                        "description": "Required. Name of the DNS Private Resolver."
-                      }
-                    },
-                    "location": {
-                      "type": "string",
-                      "defaultValue": "[resourceGroup().location]",
-                      "metadata": {
-                        "description": "Optional. Location for all resources."
-                      }
-                    },
-                    "lock": {
-                      "$ref": "#/definitions/lockType",
-                      "nullable": true,
-                      "metadata": {
-                        "description": "Optional. The lock settings of the service."
-                      }
-                    },
-                    "roleAssignments": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/roleAssignmentType"
-                      },
-                      "nullable": true,
-                      "metadata": {
-                        "description": "Optional. Array of role assignments to create."
-                      }
-                    },
-                    "tags": {
-                      "type": "object",
-                      "metadata": {
-                        "__bicep_resource_derived_type!": {
-                          "source": "Microsoft.Network/dnsResolvers@2025-05-01#properties/tags"
-                        },
-                        "description": "Optional. Tags of the resource."
-                      },
-                      "nullable": true
-                    },
-                    "virtualNetworkResourceId": {
-                      "type": "string",
-                      "metadata": {
-                        "description": "Required. ResourceId of the virtual network to attach the DNS Private Resolver to."
-                      }
-                    },
-                    "outboundEndpoints": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/outboundEndpointType"
-                      },
-                      "nullable": true,
-                      "metadata": {
-                        "description": "Optional. Outbound Endpoints for DNS Private Resolver."
-                      }
-                    },
-                    "inboundEndpoints": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/inboundEndpointType"
-                      },
-                      "nullable": true,
-                      "metadata": {
-                        "description": "Optional. Inbound Endpoints for DNS Private Resolver."
-                      }
-                    },
-                    "enableTelemetry": {
-                      "type": "bool",
-                      "defaultValue": true,
-                      "metadata": {
-                        "description": "Optional. Enable/Disable usage telemetry for module."
-                      }
-                    }
-                  },
-                  "variables": {
-                    "copy": [
-                      {
-                        "name": "formattedRoleAssignments",
-                        "count": "[length(coalesce(parameters('roleAssignments'), createArray()))]",
-                        "input": "[union(coalesce(parameters('roleAssignments'), createArray())[copyIndex('formattedRoleAssignments')], createObject('roleDefinitionId', coalesce(tryGet(variables('builtInRoleNames'), coalesce(parameters('roleAssignments'), createArray())[copyIndex('formattedRoleAssignments')].roleDefinitionIdOrName), if(contains(coalesce(parameters('roleAssignments'), createArray())[copyIndex('formattedRoleAssignments')].roleDefinitionIdOrName, '/providers/Microsoft.Authorization/roleDefinitions/'), coalesce(parameters('roleAssignments'), createArray())[copyIndex('formattedRoleAssignments')].roleDefinitionIdOrName, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', coalesce(parameters('roleAssignments'), createArray())[copyIndex('formattedRoleAssignments')].roleDefinitionIdOrName)))))]"
-                      }
-                    ],
-                    "builtInRoleNames": {
-                      "Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
-                      "DNS Resolver Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0f2ebee7-ffd4-4fc0-b3b7-664099fdad5d')]",
-                      "DNS Zone Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                      "Domain Services Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'eeaeda52-9324-47f6-8069-5d5bade478b2')]",
-                      "Domain Services Reader": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '361898ef-9ed1-48c2-849c-a832951106bb')]",
-                      "Network Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
-                      "Owner": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]",
-                      "Private DNS Zone Contributor": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b12aa53e-6015-4669-85d0-8515ebb3ae7f')]",
-                      "Reader": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-                      "Role Based Access Control Administrator": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f58310d9-a9f6-439a-9e8d-f62e7b41a168')]"
-                    },
-                    "enableReferencedModulesTelemetry": false
-                  },
-                  "resources": {
-                    "avmTelemetry": {
-                      "condition": "[parameters('enableTelemetry')]",
-                      "type": "Microsoft.Resources/deployments",
-                      "apiVersion": "2024-03-01",
-                      "name": "[format('46d3xbcp.res.network-dnsresolver.{0}.{1}', replace('0.5.7', '.', '-'), substring(uniqueString(deployment().name, parameters('location')), 0, 4))]",
-                      "properties": {
-                        "mode": "Incremental",
-                        "template": {
-                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                          "contentVersion": "1.0.0.0",
-                          "resources": [],
-                          "outputs": {
-                            "telemetry": {
-                              "type": "String",
-                              "value": "For more information, see https://aka.ms/avm/TelemetryInfo"
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "dnsResolver": {
-                      "type": "Microsoft.Network/dnsResolvers",
-                      "apiVersion": "2025-05-01",
-                      "name": "[parameters('name')]",
-                      "location": "[parameters('location')]",
-                      "tags": "[parameters('tags')]",
-                      "properties": {
-                        "virtualNetwork": {
-                          "id": "[parameters('virtualNetworkResourceId')]"
-                        }
-                      }
-                    },
-                    "dnsResolver_lock": {
-                      "condition": "[and(not(empty(coalesce(parameters('lock'), createObject()))), not(equals(tryGet(parameters('lock'), 'kind'), 'None')))]",
-                      "type": "Microsoft.Authorization/locks",
-                      "apiVersion": "2020-05-01",
-                      "scope": "[resourceId('Microsoft.Network/dnsResolvers', parameters('name'))]",
-                      "name": "[coalesce(tryGet(parameters('lock'), 'name'), format('lock-{0}', parameters('name')))]",
-                      "properties": {
-                        "level": "[coalesce(tryGet(parameters('lock'), 'kind'), '')]",
-                        "notes": "[coalesce(tryGet(parameters('lock'), 'notes'), if(equals(tryGet(parameters('lock'), 'kind'), 'CanNotDelete'), 'Cannot delete resource or child resources.', 'Cannot delete or modify the resource or child resources.'))]"
-                      },
-                      "dependsOn": [
-                        "dnsResolver"
-                      ]
-                    },
-                    "dnsResolver_roleAssignments": {
-                      "copy": {
-                        "name": "dnsResolver_roleAssignments",
-                        "count": "[length(coalesce(variables('formattedRoleAssignments'), createArray()))]"
-                      },
-                      "type": "Microsoft.Authorization/roleAssignments",
-                      "apiVersion": "2022-04-01",
-                      "scope": "[resourceId('Microsoft.Network/dnsResolvers', parameters('name'))]",
-                      "name": "[coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'name'), guid(resourceId('Microsoft.Network/dnsResolvers', parameters('name')), coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId, coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId))]",
-                      "properties": {
-                        "roleDefinitionId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId]",
-                        "principalId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId]",
-                        "description": "[tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'description')]",
-                        "principalType": "[tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'principalType')]",
-                        "condition": "[tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'condition')]",
-                        "conditionVersion": "[if(not(empty(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'condition'))), coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'conditionVersion'), '2.0'), null())]",
-                        "delegatedManagedIdentityResourceId": "[tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'delegatedManagedIdentityResourceId')]"
-                      },
-                      "dependsOn": [
-                        "dnsResolver"
-                      ]
-                    },
-                    "dnsResolver_inboundEndpoints": {
-                      "copy": {
-                        "name": "dnsResolver_inboundEndpoints",
-                        "count": "[length(coalesce(parameters('inboundEndpoints'), createArray()))]"
-                      },
-                      "type": "Microsoft.Resources/deployments",
-                      "apiVersion": "2025-04-01",
-                      "name": "[format('{0}-dnsResolver-inbound-{1}', uniqueString(subscription().id, resourceGroup().id, parameters('location')), copyIndex())]",
-                      "properties": {
-                        "expressionEvaluationOptions": {
-                          "scope": "inner"
-                        },
-                        "mode": "Incremental",
-                        "parameters": {
-                          "name": {
-                            "value": "[coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()].name]"
-                          },
-                          "tags": {
-                            "value": "[coalesce(tryGet(coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()], 'tags'), parameters('tags'))]"
-                          },
-                          "location": {
-                            "value": "[coalesce(tryGet(coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()], 'location'), parameters('location'))]"
-                          },
-                          "dnsResolverName": {
-                            "value": "[parameters('name')]"
-                          },
-                          "subnetResourceId": {
-                            "value": "[coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()].subnetResourceId]"
-                          },
-                          "privateIpAddress": {
-                            "value": "[tryGet(coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()], 'privateIpAddress')]"
-                          },
-                          "privateIpAllocationMethod": {
-                            "value": "[tryGet(coalesce(parameters('inboundEndpoints'), createArray())[copyIndex()], 'privateIpAllocationMethod')]"
-                          },
-                          "enableTelemetry": {
-                            "value": "[variables('enableReferencedModulesTelemetry')]"
-                          }
-                        },
-                        "template": {
-                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                          "languageVersion": "2.0",
-                          "contentVersion": "1.0.0.0",
-                          "metadata": {
-                            "_generator": {
-                              "name": "bicep",
-                              "version": "0.43.8.12551",
-                              "templateHash": "9202913368229467907"
-                            },
-                            "name": "DNS Resolver Inbound Endpoint",
-                            "description": "This module deploys a DNS Resolver Inbound Endpoint."
-                          },
-                          "parameters": {
-                            "dnsResolverName": {
-                              "type": "string",
-                              "minLength": 1,
-                              "metadata": {
-                                "description": "Required. Name of the DNS Private Resolver."
-                              }
-                            },
-                            "location": {
-                              "type": "string",
-                              "defaultValue": "[resourceGroup().location]",
-                              "metadata": {
-                                "description": "Optional. Location for all resources."
-                              }
-                            },
-                            "tags": {
-                              "type": "object",
-                              "metadata": {
-                                "__bicep_resource_derived_type!": {
-                                  "source": "Microsoft.Network/dnsResolvers/inboundEndpoints@2025-05-01#properties/tags"
-                                },
-                                "description": "Optional. Tags of the resource."
-                              },
-                              "nullable": true
-                            },
-                            "subnetResourceId": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "Required. The subnet ID of the inbound endpoint."
-                              }
-                            },
-                            "privateIpAddress": {
-                              "type": "string",
-                              "nullable": true,
-                              "metadata": {
-                                "description": "Optional. The private IP address of the inbound endpoint."
-                              }
-                            },
-                            "privateIpAllocationMethod": {
-                              "type": "string",
-                              "defaultValue": "Dynamic",
-                              "metadata": {
-                                "description": "Optional. The private IP allocation method of the inbound endpoint."
-                              }
-                            },
-                            "name": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "Required. The name of the inbound endpoint."
-                              }
-                            },
-                            "enableTelemetry": {
-                              "type": "bool",
-                              "defaultValue": true,
-                              "metadata": {
-                                "description": "Optional. Enable/Disable usage telemetry for module."
-                              }
-                            }
-                          },
-                          "resources": {
-                            "avmTelemetry": {
-                              "condition": "[parameters('enableTelemetry')]",
-                              "type": "Microsoft.Resources/deployments",
-                              "apiVersion": "2025-04-01",
-                              "name": "[format('46d3xbcp.res.network-dnsresolver-inboundendpoint.{0}.{1}', replace('0.1.0', '.', '-'), substring(uniqueString(deployment().name), 0, 4))]",
-                              "properties": {
-                                "mode": "Incremental",
-                                "template": {
-                                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                                  "contentVersion": "1.0.0.0",
-                                  "resources": [],
-                                  "outputs": {
-                                    "telemetry": {
-                                      "type": "String",
-                                      "value": "For more information, see https://aka.ms/avm/TelemetryInfo"
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "dnsResolver": {
-                              "existing": true,
-                              "type": "Microsoft.Network/dnsResolvers",
-                              "apiVersion": "2025-05-01",
-                              "name": "[parameters('dnsResolverName')]"
-                            },
-                            "inboundEndpoint": {
-                              "type": "Microsoft.Network/dnsResolvers/inboundEndpoints",
-                              "apiVersion": "2025-05-01",
-                              "name": "[format('{0}/{1}', parameters('dnsResolverName'), parameters('name'))]",
-                              "location": "[parameters('location')]",
-                              "tags": "[parameters('tags')]",
-                              "properties": {
-                                "ipConfigurations": [
-                                  {
-                                    "subnet": {
-                                      "id": "[parameters('subnetResourceId')]"
-                                    },
-                                    "privateIpAddress": "[parameters('privateIpAddress')]",
-                                    "privateIpAllocationMethod": "[parameters('privateIpAllocationMethod')]"
-                                  }
-                                ]
-                              }
-                            }
-                          },
-                          "outputs": {
-                            "name": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The name of the resource."
-                              },
-                              "value": "[parameters('name')]"
-                            },
-                            "resourceId": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The resource ID of the resource."
-                              },
-                              "value": "[resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', parameters('dnsResolverName'), parameters('name'))]"
-                            },
-                            "resourceGroupName": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The resource group of the resource."
-                              },
-                              "value": "[resourceGroup().name]"
-                            }
-                          }
-                        }
-                      },
-                      "dependsOn": [
-                        "dnsResolver"
-                      ]
-                    },
-                    "dnsResolver_outboundEndpoints": {
-                      "copy": {
-                        "name": "dnsResolver_outboundEndpoints",
-                        "count": "[length(coalesce(parameters('outboundEndpoints'), createArray()))]"
-                      },
-                      "type": "Microsoft.Resources/deployments",
-                      "apiVersion": "2025-04-01",
-                      "name": "[format('{0}-dnsResolver-outbound-{1}', uniqueString(subscription().id, resourceGroup().id, parameters('location')), copyIndex())]",
-                      "properties": {
-                        "expressionEvaluationOptions": {
-                          "scope": "inner"
-                        },
-                        "mode": "Incremental",
-                        "parameters": {
-                          "name": {
-                            "value": "[coalesce(parameters('outboundEndpoints'), createArray())[copyIndex()].name]"
-                          },
-                          "tags": {
-                            "value": "[coalesce(tryGet(coalesce(parameters('outboundEndpoints'), createArray())[copyIndex()], 'tags'), parameters('tags'))]"
-                          },
-                          "location": {
-                            "value": "[coalesce(tryGet(coalesce(parameters('outboundEndpoints'), createArray())[copyIndex()], 'location'), parameters('location'))]"
-                          },
-                          "dnsResolverName": {
-                            "value": "[parameters('name')]"
-                          },
-                          "subnetResourceId": {
-                            "value": "[coalesce(parameters('outboundEndpoints'), createArray())[copyIndex()].subnetResourceId]"
-                          },
-                          "enableTelemetry": {
-                            "value": "[variables('enableReferencedModulesTelemetry')]"
-                          }
-                        },
-                        "template": {
-                          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                          "languageVersion": "2.0",
-                          "contentVersion": "1.0.0.0",
-                          "metadata": {
-                            "_generator": {
-                              "name": "bicep",
-                              "version": "0.43.8.12551",
-                              "templateHash": "8836675309205008533"
-                            },
-                            "name": "DNS Resolver Outbound Endpoint",
-                            "description": "This module deploys a DNS Resolver Outbound Endpoint."
-                          },
-                          "parameters": {
-                            "dnsResolverName": {
-                              "type": "string",
-                              "minLength": 1,
-                              "metadata": {
-                                "description": "Required. Name of the DNS Private Resolver."
-                              }
-                            },
-                            "location": {
-                              "type": "string",
-                              "defaultValue": "[resourceGroup().location]",
-                              "metadata": {
-                                "description": "Optional. Location for all resources."
-                              }
-                            },
-                            "tags": {
-                              "type": "object",
-                              "metadata": {
-                                "__bicep_resource_derived_type!": {
-                                  "source": "Microsoft.Network/dnsResolvers/outboundEndpoints@2025-05-01#properties/tags"
-                                },
-                                "description": "Optional. Tags of the resource."
-                              },
-                              "nullable": true
-                            },
-                            "subnetResourceId": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "Required. The subnet ID of the inbound endpoint."
-                              }
-                            },
-                            "name": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "Required. The name of the inbound endpoint."
-                              }
-                            },
-                            "enableTelemetry": {
-                              "type": "bool",
-                              "defaultValue": true,
-                              "metadata": {
-                                "description": "Optional. Enable/Disable usage telemetry for module."
-                              }
-                            }
-                          },
-                          "resources": {
-                            "avmTelemetry": {
-                              "condition": "[parameters('enableTelemetry')]",
-                              "type": "Microsoft.Resources/deployments",
-                              "apiVersion": "2025-04-01",
-                              "name": "[format('46d3xbcp.res.network-dnsresolver-outboundendpoint.{0}.{1}', replace('0.1.0', '.', '-'), substring(uniqueString(deployment().name), 0, 4))]",
-                              "properties": {
-                                "mode": "Incremental",
-                                "template": {
-                                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                                  "contentVersion": "1.0.0.0",
-                                  "resources": [],
-                                  "outputs": {
-                                    "telemetry": {
-                                      "type": "String",
-                                      "value": "For more information, see https://aka.ms/avm/TelemetryInfo"
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "dnsResolver": {
-                              "existing": true,
-                              "type": "Microsoft.Network/dnsResolvers",
-                              "apiVersion": "2025-05-01",
-                              "name": "[parameters('dnsResolverName')]"
-                            },
-                            "outboundEndpoint": {
-                              "type": "Microsoft.Network/dnsResolvers/outboundEndpoints",
-                              "apiVersion": "2025-05-01",
-                              "name": "[format('{0}/{1}', parameters('dnsResolverName'), parameters('name'))]",
-                              "location": "[parameters('location')]",
-                              "tags": "[parameters('tags')]",
-                              "properties": {
-                                "subnet": {
-                                  "id": "[parameters('subnetResourceId')]"
-                                }
-                              }
-                            }
-                          },
-                          "outputs": {
-                            "name": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The name of the resource."
-                              },
-                              "value": "[parameters('name')]"
-                            },
-                            "resourceId": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The resource ID of the resource."
-                              },
-                              "value": "[resourceId('Microsoft.Network/dnsResolvers/outboundEndpoints', parameters('dnsResolverName'), parameters('name'))]"
-                            },
-                            "resourceGroupName": {
-                              "type": "string",
-                              "metadata": {
-                                "description": "The resource group of the resource."
-                              },
-                              "value": "[resourceGroup().name]"
-                            }
-                          }
-                        }
-                      },
-                      "dependsOn": [
-                        "dnsResolver"
-                      ]
-                    }
-                  },
-                  "outputs": {
-                    "resourceGroupName": {
-                      "type": "string",
-                      "metadata": {
-                        "description": "The resource group the DNS Private Resolver was deployed into."
-                      },
-                      "value": "[resourceGroup().name]"
-                    },
-                    "resourceId": {
-                      "type": "string",
-                      "metadata": {
-                        "description": "The resource ID of the DNS Private Resolver."
-                      },
-                      "value": "[resourceId('Microsoft.Network/dnsResolvers', parameters('name'))]"
-                    },
-                    "name": {
-                      "type": "string",
-                      "metadata": {
-                        "description": "The name of the DNS Private Resolver."
-                      },
-                      "value": "[parameters('name')]"
-                    },
-                    "location": {
-                      "type": "string",
-                      "metadata": {
-                        "description": "The location the resource was deployed into."
-                      },
-                      "value": "[reference('dnsResolver', '2025-05-01', 'full').location]"
-                    },
-                    "outboundEndpointsObject": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/endpointDetailsType"
-                      },
-                      "metadata": {
-                        "description": "The outbound endpoints object."
-                      },
-                      "copy": {
-                        "count": "[length(range(0, length(coalesce(parameters('outboundEndpoints'), createArray()))))]",
-                        "input": {
-                          "name": "[reference(format('dnsResolver_outboundEndpoints[{0}]', range(0, length(coalesce(parameters('outboundEndpoints'), createArray())))[copyIndex()])).outputs.name.value]",
-                          "resourceId": "[reference(format('dnsResolver_outboundEndpoints[{0}]', range(0, length(coalesce(parameters('outboundEndpoints'), createArray())))[copyIndex()])).outputs.resourceId.value]"
-                        }
-                      }
-                    },
-                    "inboundEndpointsObject": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/endpointDetailsType"
-                      },
-                      "metadata": {
-                        "description": "The inbound endpoints object."
-                      },
-                      "copy": {
-                        "count": "[length(range(0, length(coalesce(parameters('inboundEndpoints'), createArray()))))]",
-                        "input": {
-                          "name": "[reference(format('dnsResolver_inboundEndpoints[{0}]', range(0, length(coalesce(parameters('inboundEndpoints'), createArray())))[copyIndex()])).outputs.name.value]",
-                          "resourceId": "[reference(format('dnsResolver_inboundEndpoints[{0}]', range(0, length(coalesce(parameters('inboundEndpoints'), createArray())))[copyIndex()])).outputs.resourceId.value]"
-                        }
-                      }
                     }
                   }
                 }
@@ -36900,7 +36087,7 @@
             },
             "dnsResolverInboundEndpointPrivateIpAddress": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').ipConfigurations[0].privateIpAddress]"
+              "value": "[variables('dnsResolverInboundEndpointPrivateIpAddress')]"
             }
           }
         }

@@ -10,7 +10,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
 - Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` and `vm-azure02` on private-only NICs.
-- Azure DNS Private Resolver with inbound and outbound endpoint subnets.
+- Azure DNS Private Resolver with inbound endpoint `172.19.2.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
@@ -70,7 +70,7 @@ To preview changes:
 
 ## Notes
 
-- The deployment uses AVM modules for VNets, NSGs, Bastion, Azure Firewall, DNS Resolver, Private DNS, VPN gateways, gateway connections, and the Windows VM.
+- The deployment uses AVM modules for VNets, NSGs, Bastion, Private DNS, VPN gateways, gateway connections, and the Windows VM. Azure Firewall and DNS Resolver resources are deployed directly where the template needs tighter control.
 - The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.1.4`.
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.

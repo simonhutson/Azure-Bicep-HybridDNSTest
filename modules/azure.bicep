@@ -23,6 +23,7 @@ param onPremDnsServerIpAddress string
 param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
+var dnsResolverInboundEndpointPrivateIpAddress = '172.19.2.4'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 
 var nsgNames = [
@@ -239,28 +240,45 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-11-01' = {
   tags: tags
 }
 
-module dnsResolver 'br/public:avm/res/network/dns-resolver:0.5.7' = {
+resource dnsResolver 'Microsoft.Network/dnsResolvers@2025-05-01' = {
   name: 'dnspr-azure'
-  params: {
-    name: 'dnspr-azure'
-    location: location
-    virtualNetworkResourceId: virtualNetwork.outputs.resourceId
-    inboundEndpoints: [
-      {
-        name: 'inbound'
-        subnetResourceId: subnetResourceIds.dnsResolverInbound
-        privateIpAllocationMethod: 'Dynamic'
-      }
-    ]
-    outboundEndpoints: [
-      {
-        name: 'outbound'
-        subnetResourceId: subnetResourceIds.dnsResolverOutbound
-      }
-    ]
-    enableTelemetry: false
-    tags: tags
+  location: location
+  properties: {
+    virtualNetwork: {
+      id: virtualNetwork.outputs.resourceId
+    }
   }
+  tags: tags
+}
+
+resource dnsResolverInboundEndpoint 'Microsoft.Network/dnsResolvers/inboundEndpoints@2025-05-01' = {
+  parent: dnsResolver
+  name: 'inbound'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        subnet: {
+          id: subnetResourceIds.dnsResolverInbound
+        }
+        privateIpAddress: dnsResolverInboundEndpointPrivateIpAddress
+        privateIpAllocationMethod: 'Static'
+      }
+    ]
+  }
+  tags: tags
+}
+
+resource dnsResolverOutboundEndpoint 'Microsoft.Network/dnsResolvers/outboundEndpoints@2025-05-01' = {
+  parent: dnsResolver
+  name: 'outbound'
+  location: location
+  properties: {
+    subnet: {
+      id: subnetResourceIds.dnsResolverOutbound
+    }
+  }
+  tags: tags
 }
 
 resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2022-07-01' = {
@@ -269,14 +287,11 @@ resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2022-07-0
   properties: {
     dnsResolverOutboundEndpoints: [
       {
-        id: resourceId('Microsoft.Network/dnsResolvers/outboundEndpoints', 'dnspr-azure', 'outbound')
+        id: dnsResolverOutboundEndpoint.id
       }
     ]
   }
   tags: tags
-  dependsOn: [
-    dnsResolver
-  ]
 }
 
 resource onPremDnsForwardingRule 'Microsoft.Network/dnsForwardingRulesets/forwardingRules@2022-07-01' = {
@@ -401,4 +416,4 @@ output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
-output dnsResolverInboundEndpointPrivateIpAddress string = reference(resourceId('Microsoft.Network/dnsResolvers/inboundEndpoints', 'dnspr-azure', 'inbound'), '2025-05-01').ipConfigurations[0].privateIpAddress
+output dnsResolverInboundEndpointPrivateIpAddress string = dnsResolverInboundEndpointPrivateIpAddress
