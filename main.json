@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "18306189359990688081"
+      "templateHash": "6834261549786752046"
     }
   },
   "parameters": {
@@ -16313,7 +16313,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "4088604070490985178"
+              "templateHash": "6750854262635507648"
             }
           },
           "parameters": {
@@ -16415,10 +16415,6 @@
                 "networkSecurityGroupName": "nsg-zscaler-zpa",
                 "routes": [
                   {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
-                  {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
                   },
@@ -16435,10 +16431,6 @@
                 "subnetAddressPrefix": "172.19.40.0/24",
                 "networkSecurityGroupName": "nsg-avd01",
                 "routes": [
-                  {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
                   {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
@@ -16457,10 +16449,6 @@
                 "networkSecurityGroupName": "nsg-live",
                 "routes": [
                   {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
-                  {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
                   },
@@ -16477,10 +16465,6 @@
                 "subnetAddressPrefix": "172.19.15.0/28",
                 "networkSecurityGroupName": "nsg-dhcp",
                 "routes": [
-                  {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
                   {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
@@ -16499,10 +16483,6 @@
                 "networkSecurityGroupName": "nsg-unisim",
                 "routes": [
                   {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
-                  {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
                   },
@@ -16519,10 +16499,6 @@
                 "subnetAddressPrefix": "172.19.10.0/23",
                 "networkSecurityGroupName": "nsg-utilities",
                 "routes": [
-                  {
-                    "name": "default-to-azure-firewall",
-                    "addressPrefix": "0.0.0.0/0"
-                  },
                   {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"

@@ -14,7 +14,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
-- Route tables that force requested Azure subnet-to-subnet, Internet, and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
+- Route tables that force requested Azure subnet-to-subnet and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
 - No VM NIC creates or attaches a public IP address.

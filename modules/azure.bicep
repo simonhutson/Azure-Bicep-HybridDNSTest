@@ -64,10 +64,6 @@ var azureFirewallRouteTableDefinitions = [
     networkSecurityGroupName: 'nsg-zscaler-zpa'
     routes: [
       {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
-      {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
       }
@@ -84,10 +80,6 @@ var azureFirewallRouteTableDefinitions = [
     subnetAddressPrefix: '172.19.40.0/24'
     networkSecurityGroupName: 'nsg-avd01'
     routes: [
-      {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
       {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
@@ -106,10 +98,6 @@ var azureFirewallRouteTableDefinitions = [
     networkSecurityGroupName: 'nsg-live'
     routes: [
       {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
-      {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
       }
@@ -126,10 +114,6 @@ var azureFirewallRouteTableDefinitions = [
     subnetAddressPrefix: '172.19.15.0/28'
     networkSecurityGroupName: 'nsg-dhcp'
     routes: [
-      {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
       {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
@@ -148,10 +132,6 @@ var azureFirewallRouteTableDefinitions = [
     networkSecurityGroupName: 'nsg-unisim'
     routes: [
       {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
-      {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
       }
@@ -168,10 +148,6 @@ var azureFirewallRouteTableDefinitions = [
     subnetAddressPrefix: '172.19.10.0/23'
     networkSecurityGroupName: 'nsg-utilities'
     routes: [
-      {
-        name: 'default-to-azure-firewall'
-        addressPrefix: '0.0.0.0/0'
-      }
       {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
