@@ -14,7 +14,7 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-onprem'
 var adSubnetName = 'ad'
-var adSubnetAddressPrefix = '10.0.1.0/24'
+var adSubnetAddressPrefix = '10.0.4.0/24'
 var adNetworkSecurityGroupName = 'nsg-ad'
 
 resource onPremToAzureFirewallRouteTable 'Microsoft.Network/routeTables@2023-11-01' = {

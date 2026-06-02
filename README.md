@@ -6,14 +6,15 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 - Resource groups `rg-onprem` and `rg-azure`.
 - Simulated on-prem VNet `vnet-onprem` with address space `10.0.0.0/8`.
-- Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ad` at `10.0.1.4`.
+- Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ad` at `10.0.4.4`.
 - Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
 - Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` and `vm-azure02` on private-only NICs.
-- Azure DNS Private Resolver with inbound endpoint `172.19.2.4` and outbound endpoint subnet.
+- Azure DNS Private Resolver with inbound endpoint `172.19.4.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
+- Dedicated NSGs for each `AzureBastionSubnet` with the Microsoft-documented Azure Bastion inbound and outbound rules.
 - Route tables that force requested Azure subnet-to-subnet and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
@@ -36,9 +37,18 @@ The request included CIDR values that Azure will not accept as written. The temp
 - `vcpe-corp`: `172.19.80.96.28` was corrected to `172.19.80.96/28`.
 - `dhcp`: corrected from invalid and overlapping `172.19.15.0/18` to `172.19.15.0/28`.
 
-The Azure Firewall platform subnets use the explicitly requested non-overlapping ranges:
+The platform subnets use non-overlapping ranges reserved for Azure services and future route-server testing:
 
-- `AzureFirewallSubnet`: `172.19.1.0/25`
+- On-prem `GatewaySubnet`: `10.0.0.0/24`
+- On-prem `AzureBastionSubnet`: `10.0.1.0/24`
+- On-prem `AzureFirewallSubnet`: `10.0.2.0/24`
+- On-prem `RouteServerSubnet`: `10.0.3.0/24`
+- On-prem `ad`: `10.0.4.0/24`
+- Azure `GatewaySubnet`: `172.19.0.0/24`
+- Azure `AzureBastionSubnet`: `172.19.1.0/24`
+- Azure `AzureFirewallSubnet`: `172.19.2.0/24`
+- Azure `RouteServerSubnet`: `172.19.3.0/24`
+- Azure DNS resolver subnets: `172.19.4.0/25` and `172.19.4.128/25`
 
 The `172.19.85.0/24` area is represented by the requested `fw04-*` workload subnets, which would overlap an Azure Firewall platform subnet if both used that same `/24`.
 
@@ -78,10 +88,12 @@ To preview changes:
 ## Notes
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Private DNS, VPN gateways, gateway connections, and the Windows VM. Azure Firewall and DNS Resolver resources are deployed directly where the template needs tighter control.
-- The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.1.4`.
+- The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.4.4`.
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
 - The private DNS zone auto-registers only VMs in `vnet-azure`.
 - Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
 - Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.
+- `RouteServerSubnet` placeholders intentionally do not associate NSGs because Azure Route Server does not support NSGs on that subnet.
+- `AzureBastionSubnet` subnets use dedicated NSGs with the rules documented for Azure Bastion.
 - VPN gateways can take a long time to deploy.

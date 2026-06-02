@@ -26,9 +26,126 @@ param onPremDnsServerIpAddress string
 param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
-var dnsResolverInboundEndpointPrivateIpAddress = '172.19.2.4'
+var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
+var dnsResolverInboundEndpointPrivateIpAddress = '172.19.4.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
+
+var bastionNetworkSecurityGroupRules = [
+  {
+    name: 'AllowHttpsInbound'
+    properties: {
+      priority: 100
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'Internet'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowGatewayManagerInbound'
+    properties: {
+      priority: 110
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'GatewayManager'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowBastionHostCommunication'
+    properties: {
+      priority: 120
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: 'VirtualNetwork'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '8080'
+        '5701'
+      ]
+    }
+  }
+  {
+    name: 'AllowAzureLoadBalancerInbound'
+    properties: {
+      priority: 130
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'AzureLoadBalancer'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowSshRdpOutbound'
+    properties: {
+      priority: 140
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '22'
+        '3389'
+      ]
+    }
+  }
+  {
+    name: 'AllowAzureCloudOutbound'
+    properties: {
+      priority: 150
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'AzureCloud'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowBastionCommunication'
+    properties: {
+      priority: 160
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: 'VirtualNetwork'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '8080'
+        '5701'
+      ]
+    }
+  }
+  {
+    name: 'AllowHttpOutbound'
+    properties: {
+      priority: 170
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'Internet'
+      destinationPortRange: '80'
+    }
+  }
+]
 
 var firewallTransitAzureRoutes = [
   {
@@ -264,17 +381,26 @@ var customSubnetDefinitions = [for subnet in customSubnets: union({
 var platformSubnetDefinitions = [
   {
     name: 'dns-resolver-inbound'
-    addressPrefix: '172.19.2.0/25'
+    addressPrefix: '172.19.4.0/25'
     delegation: 'Microsoft.Network/dnsResolvers'
   }
   {
     name: 'dns-resolver-outbound'
-    addressPrefix: '172.19.2.128/25'
+    addressPrefix: '172.19.4.128/25'
     delegation: 'Microsoft.Network/dnsResolvers'
   }
   {
+    name: 'RouteServerSubnet'
+    addressPrefix: '172.19.3.0/24'
+  }
+  {
     name: 'AzureFirewallSubnet'
-    addressPrefix: '172.19.1.0/25'
+    addressPrefix: '172.19.2.0/24'
+  }
+  {
+    name: 'AzureBastionSubnet'
+    addressPrefix: '172.19.1.0/24'
+    networkSecurityGroupResourceId: resourceId('Microsoft.Network/networkSecurityGroups', bastionNetworkSecurityGroupName)
   }
   {
     name: 'GatewaySubnet'
@@ -310,6 +436,17 @@ module networkSecurityGroups 'br/public:avm/res/network/network-security-group:0
   }
 }]
 
+module bastionNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
+  name: bastionNetworkSecurityGroupName
+  params: {
+    name: bastionNetworkSecurityGroupName
+    location: location
+    securityRules: bastionNetworkSecurityGroupRules
+    enableTelemetry: false
+    tags: tags
+  }
+}
+
 module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
   name: virtualNetworkName
   params: {
@@ -324,6 +461,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
   }
   dependsOn: [
     networkSecurityGroups
+    bastionNetworkSecurityGroup
   ]
 }
 

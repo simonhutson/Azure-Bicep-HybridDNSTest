@@ -30,10 +30,127 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-onprem'
 var domainControllerName = 'vm-onprem01'
-var domainControllerPrivateIpAddress = '10.0.1.4'
+var domainControllerPrivateIpAddress = '10.0.4.4'
 var adSubnetName = 'ad'
+var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var addsConfigurationVersion = '2026-06-02.1'
 var configureAddsCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { $ErrorActionPreference = `"Stop`"; $domainName = `"${activeDirectoryDomainName}`"; $netbiosName = `"${activeDirectoryNetbiosName}`"; $safeModePassword = ConvertTo-SecureString `"${domainSafeModeAdminPassword}`" -AsPlainText -Force; if (Get-Service -Name NTDS -ErrorAction SilentlyContinue) { Write-Host `"Domain controller role already configured.`"; exit 0 }; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Import-Module ADDSDeployment; Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion; New-Item -Path C:/AzureData -ItemType Directory -Force | Out-Null; Set-Content -Path C:/AzureData/adds-promotion-requested.txt -Value (Get-Date -Format o); shutdown.exe /r /t 30 /c `"Completing AD DS forest promotion`"; exit 0 }"'
+
+var bastionNetworkSecurityGroupRules = [
+  {
+    name: 'AllowHttpsInbound'
+    properties: {
+      priority: 100
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'Internet'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowGatewayManagerInbound'
+    properties: {
+      priority: 110
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'GatewayManager'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowBastionHostCommunication'
+    properties: {
+      priority: 120
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: 'VirtualNetwork'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '8080'
+        '5701'
+      ]
+    }
+  }
+  {
+    name: 'AllowAzureLoadBalancerInbound'
+    properties: {
+      priority: 130
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: 'AzureLoadBalancer'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowSshRdpOutbound'
+    properties: {
+      priority: 140
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '22'
+        '3389'
+      ]
+    }
+  }
+  {
+    name: 'AllowAzureCloudOutbound'
+    properties: {
+      priority: 150
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: 'Tcp'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'AzureCloud'
+      destinationPortRange: '443'
+    }
+  }
+  {
+    name: 'AllowBastionCommunication'
+    properties: {
+      priority: 160
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: 'VirtualNetwork'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'VirtualNetwork'
+      destinationPortRanges: [
+        '8080'
+        '5701'
+      ]
+    }
+  }
+  {
+    name: 'AllowHttpOutbound'
+    properties: {
+      priority: 170
+      direction: 'Outbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: '*'
+      sourcePortRange: '*'
+      destinationAddressPrefix: 'Internet'
+      destinationPortRange: '80'
+    }
+  }
+]
 
 var subnetResourceIds = {
   ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
@@ -44,6 +161,17 @@ module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:
   params: {
     name: 'nsg-ad'
     location: location
+    enableTelemetry: false
+    tags: tags
+  }
+}
+
+module bastionNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
+  name: bastionNetworkSecurityGroupName
+  params: {
+    name: bastionNetworkSecurityGroupName
+    location: location
+    securityRules: bastionNetworkSecurityGroupRules
     enableTelemetry: false
     tags: tags
   }
@@ -64,8 +192,21 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
     subnets: [
       {
         name: adSubnetName
-        addressPrefix: '10.0.1.0/24'
+        addressPrefix: '10.0.4.0/24'
         networkSecurityGroupResourceId: adNetworkSecurityGroup.outputs.resourceId
+      }
+      {
+        name: 'RouteServerSubnet'
+        addressPrefix: '10.0.3.0/24'
+      }
+      {
+        name: 'AzureFirewallSubnet'
+        addressPrefix: '10.0.2.0/24'
+      }
+      {
+        name: 'AzureBastionSubnet'
+        addressPrefix: '10.0.1.0/24'
+        networkSecurityGroupResourceId: bastionNetworkSecurityGroup.outputs.resourceId
       }
       {
         name: 'GatewaySubnet'

@@ -3,6 +3,9 @@
         "az": true,
         "ConvertTo-Json": true,
         "ForEach-Object": true,
-        "Get-Item": true
+        "Get-Item": true,
+        "R": true,
+        "Group-Object": true,
+        "GetRange": true
     }
 }
