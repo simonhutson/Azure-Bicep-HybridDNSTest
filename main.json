@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "6834261549786752046"
+      "templateHash": "4317096336649157512"
     }
   },
   "parameters": {
@@ -35,6 +35,13 @@
       "defaultValue": "azureadmin",
       "metadata": {
         "description": "Administrator username for the domain controller VM."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2ads_v5",
+      "metadata": {
+        "description": "Azure VM size used for the deployed Windows VMs."
       }
     },
     "adminPassword": {
@@ -121,6 +128,9 @@
           "adminUsername": {
             "value": "[parameters('adminUsername')]"
           },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
           "adminPassword": {
             "value": "[parameters('adminPassword')]"
           },
@@ -144,7 +154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "14213895486570293405"
+              "templateHash": "16402529823629251118"
             }
           },
           "parameters": {
@@ -159,6 +169,13 @@
               "type": "string",
               "metadata": {
                 "description": "Administrator username for the domain controller VM."
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_D2ads_v5",
+              "metadata": {
+                "description": "Azure VM size used for the domain controller VM."
               }
             },
             "adminPassword": {
@@ -6818,7 +6835,7 @@
                     "value": "Windows"
                   },
                   "vmSize": {
-                    "value": "Standard_D2ads_v5"
+                    "value": "[parameters('vmSize')]"
                   },
                   "adminUsername": {
                     "value": "[parameters('adminUsername')]"
@@ -6840,7 +6857,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "Standard_LRS"
+                        "storageAccountType": "StandardSSD_LRS"
                       }
                     }
                   },
@@ -16290,6 +16307,9 @@
           "adminUsername": {
             "value": "[parameters('adminUsername')]"
           },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
           "adminPassword": {
             "value": "[parameters('adminPassword')]"
           },
@@ -16313,7 +16333,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "6750854262635507648"
+              "templateHash": "14876954541659714242"
             }
           },
           "parameters": {
@@ -16328,6 +16348,13 @@
               "type": "string",
               "metadata": {
                 "description": "Administrator username for Azure test VMs."
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_D2ads_v5",
+              "metadata": {
+                "description": "Azure VM size used for Azure test VMs."
               }
             },
             "adminPassword": {
@@ -24543,7 +24570,7 @@
                     "value": "Windows"
                   },
                   "vmSize": {
-                    "value": "Standard_D2ads_v5"
+                    "value": "[parameters('vmSize')]"
                   },
                   "adminUsername": {
                     "value": "[parameters('adminUsername')]"
@@ -24565,7 +24592,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "Standard_LRS"
+                        "storageAccountType": "StandardSSD_LRS"
                       }
                     }
                   },

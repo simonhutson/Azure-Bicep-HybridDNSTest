@@ -12,6 +12,9 @@ param azureResourceGroupName string = 'rg-azure'
 @description('Administrator username for the domain controller VM.')
 param adminUsername string = 'azureadmin'
 
+@description('Azure VM size used for the deployed Windows VMs.')
+param vmSize string = 'Standard_D2ads_v5'
+
 @secure()
 @description('Administrator password for the domain controller VM.')
 param adminPassword string
@@ -59,6 +62,7 @@ module onPrem './modules/onprem.bicep' = {
   params: {
     location: location
     adminUsername: adminUsername
+    vmSize: vmSize
     adminPassword: adminPassword
     domainSafeModeAdminPassword: domainSafeModeAdminPassword
     activeDirectoryDomainName: activeDirectoryDomainName
@@ -73,6 +77,7 @@ module azure './modules/azure.bicep' = {
   params: {
     location: location
     adminUsername: adminUsername
+    vmSize: vmSize
     adminPassword: adminPassword
     privateDnsZoneName: privateDnsZoneName
     activeDirectoryDomainName: activeDirectoryDomainName

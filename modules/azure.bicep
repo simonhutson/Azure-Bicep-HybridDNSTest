@@ -6,6 +6,9 @@ param location string = resourceGroup().location
 @description('Administrator username for Azure test VMs.')
 param adminUsername string
 
+@description('Azure VM size used for Azure test VMs.')
+param vmSize string = 'Standard_D2ads_v5'
+
 @secure()
 @description('Administrator password for Azure test VMs.')
 param adminPassword string
@@ -581,7 +584,7 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
     location: location
     availabilityZone: -1
     osType: 'Windows'
-    vmSize: 'Standard_D2ads_v5'
+    vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword
     imageReference: {
@@ -595,7 +598,7 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
       createOption: 'FromImage'
       deleteOption: 'Delete'
       managedDisk: {
-        storageAccountType: 'Standard_LRS'
+        storageAccountType: 'StandardSSD_LRS'
       }
     }
     nicConfigurations: [

@@ -57,6 +57,12 @@ The script prompts for the secure values, validates the subscription-scope deplo
 .\deploy.ps1 -Location swedencentral -SubscriptionId '<subscription-id>'
 ```
 
+The VM size defaults to `Standard_D2ads_v5` and can be overridden:
+
+```powershell
+.\deploy.ps1 -VmSize 'Standard_D4ads_v5'
+```
+
 To validate without deploying:
 
 ```powershell

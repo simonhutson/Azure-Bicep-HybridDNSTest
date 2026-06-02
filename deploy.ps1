@@ -6,6 +6,7 @@ param(
     [string]$OnPremResourceGroupName = 'rg-onprem',
     [string]$AzureResourceGroupName = 'rg-azure',
     [string]$AdminUsername = 'azureadmin',
+    [string]$VmSize = 'Standard_D2ads_v5',
     [string]$PrivateDnsZoneName = 'contoso.azure',
     [ValidateLength(1, 15)]
     [string]$ActiveDirectoryNetbiosName = 'CONTOSO',
@@ -129,6 +130,7 @@ try {
             onPremResourceGroupName = @{ value = $OnPremResourceGroupName }
             azureResourceGroupName = @{ value = $AzureResourceGroupName }
             adminUsername = @{ value = $AdminUsername }
+            vmSize = @{ value = $VmSize }
             adminPassword = @{ value = (ConvertTo-PlainText -SecureValue $AdminPassword) }
             domainSafeModeAdminPassword = @{ value = (ConvertTo-PlainText -SecureValue $DomainSafeModeAdminPassword) }
             vpnSharedKey = @{ value = (ConvertTo-PlainText -SecureValue $VpnSharedKey) }
