@@ -15,6 +15,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
 - Dedicated NSGs for each `AzureBastionSubnet` with the Microsoft-documented Azure Bastion inbound and outbound rules.
+- Azure Compute Gallery VM Application definition for an Ubuntu SD-WAN/router-style appliance bootstrap package.
 - Route tables that force requested Azure subnet-to-subnet and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
@@ -27,7 +28,9 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - [main.bicepparam](main.bicepparam): optional sample parameters.
 - [modules/onprem.bicep](modules/onprem.bicep): simulated on-prem network, Bastion, VPN gateway, and domain controller.
 - [modules/azure.bicep](modules/azure.bicep): simulated Azure network, DNS resolver, firewall, Bastion, private DNS zone, and VPN gateway.
+- [modules/ubuntu-router-vm-application.bicep](modules/ubuntu-router-vm-application.bicep): Azure Compute Gallery VM Application for the Ubuntu router appliance package.
 - [modules/vpn-connection.bicep](modules/vpn-connection.bicep): reusable VNet-to-VNet IPsec connection module.
+- [vm-applications/ubuntu-sdwan-router](vm-applications/ubuntu-sdwan-router): install, update, and remove scripts packaged for the Ubuntu router VM Application.
 
 ## CIDR Corrections
 
@@ -73,6 +76,23 @@ The VM size defaults to `Standard_D2ads_v5` and can be overridden:
 .\deploy.ps1 -VmSize 'Standard_D4ads_v5'
 ```
 
+The Ubuntu SD-WAN/router VM Application creates the gallery and application by default. During a real deployment, the script packages the local artifact, creates or reuses a private blob container in `rg-azure`, uploads the zip with Microsoft Entra authentication, generates a temporary read-only user delegation SAS URI, and passes it to the deployment:
+
+```powershell
+.\deploy.ps1
+```
+
+The storage account name is generated from the subscription and resource group by default. You can override the package storage settings or provide your own reachable package URI:
+
+```powershell
+.\deploy.ps1 -VmApplicationPackageStorageAccountName '<storage-account-name>'
+.\deploy.ps1 -UbuntuRouterVmApplicationPackageUri '<https-package-uri>'
+```
+
+For `-ValidateOnly` and `-WhatIf`, the script skips automatic packaging/upload unless `-UbuntuRouterVmApplicationPackageUri` is provided.
+
+The signed-in Azure CLI principal needs blob data-plane rights such as `Storage Blob Data Contributor` on the package storage account or containing scope for the automatic upload and user delegation SAS generation. The script tries to assign `Storage Blob Data Contributor` on the package storage account automatically, then retries storage data-plane operations for up to five minutes while RBAC propagates. Use `-SkipVmApplicationStorageRoleAssignment` if you manage that role assignment separately, or `-VmApplicationStorageRolePropagationWaitSeconds` to adjust the propagation wait.
+
 To validate without deploying:
 
 ```powershell
@@ -91,6 +111,7 @@ To preview changes:
 - The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.4.4`.
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
+- The Ubuntu router VM Application package installs FRR, WireGuard, strongSwan, and forwarding defaults. It does not configure BGP peers, tunnel keys, or route policy.
 - The private DNS zone auto-registers only VMs in `vnet-azure`.
 - Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
 - Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.

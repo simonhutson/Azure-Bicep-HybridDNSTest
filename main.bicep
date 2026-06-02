@@ -9,6 +9,15 @@ param onPremResourceGroupName string = 'rg-onprem'
 @description('Resource group name for the simulated Azure environment.')
 param azureResourceGroupName string = 'rg-azure'
 
+@description('Azure Compute Gallery name used to publish lab VM Applications.')
+param vmApplicationGalleryName string = 'galHybridDns'
+
+@description('Version used for the Ubuntu SD-WAN/router VM Application.')
+param ubuntuRouterVmApplicationVersion string = '1.0.0'
+
+@description('HTTPS URI for the zipped Ubuntu SD-WAN/router VM Application package. Leave empty to skip publishing the application version.')
+param ubuntuRouterVmApplicationPackageUri string = ''
+
 @description('Administrator username for the domain controller VM.')
 param adminUsername string = 'azureadmin'
 
@@ -86,6 +95,18 @@ module azure './modules/azure.bicep' = {
   }
 }
 
+module ubuntuRouterVmApplication './modules/ubuntu-router-vm-application.bicep' = {
+  name: 'ubuntu-router-vm-application'
+  scope: azureResourceGroup
+  params: {
+    location: location
+    galleryName: vmApplicationGalleryName
+    applicationVersionName: ubuntuRouterVmApplicationVersion
+    packageFileUri: ubuntuRouterVmApplicationPackageUri
+    tags: tags
+  }
+}
+
 module onPremRoutes './modules/onprem-routes.bicep' = {
   name: 'onprem-route-tables'
   scope: onPremResourceGroup
@@ -129,3 +150,5 @@ output privateDnsZoneResourceId string = azure.outputs.privateDnsZoneResourceId
 output dnsResolverInboundEndpointPrivateIpAddress string = azure.outputs.dnsResolverInboundEndpointPrivateIpAddress
 output domainControllerPrivateIpAddress string = onPrem.outputs.domainControllerPrivateIpAddress
 output onPremRouteTableResourceId string = onPremRoutes.outputs.routeTableResourceId
+output ubuntuRouterVmApplicationResourceId string = ubuntuRouterVmApplication.outputs.applicationResourceId
+output ubuntuRouterVmApplicationVersionResourceId string = ubuntuRouterVmApplication.outputs.applicationVersionResourceId
