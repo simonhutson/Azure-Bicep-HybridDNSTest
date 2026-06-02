@@ -488,6 +488,7 @@ resource azureFirewallRouteTables 'Microsoft.Network/routeTables@2023-11-01' = [
   tags: tags
 }]
 
+@batchSize(1)
 resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = [for (routeTable, routeTableIndex) in azureFirewallRouteTableDefinitions: {
   name: '${virtualNetworkName}/${routeTable.subnetName}'
   properties: {

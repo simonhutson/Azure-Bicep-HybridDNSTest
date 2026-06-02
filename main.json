@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "10740884780055192737"
+      "templateHash": "18306189359990688081"
     }
   },
   "parameters": {
@@ -16313,7 +16313,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "9758953639610315633"
+              "templateHash": "4088604070490985178"
             }
           },
           "parameters": {
@@ -16817,7 +16817,9 @@
             {
               "copy": {
                 "name": "azureFirewallRouteTableSubnetAssociations",
-                "count": "[length(variables('azureFirewallRouteTableDefinitions'))]"
+                "count": "[length(variables('azureFirewallRouteTableDefinitions'))]",
+                "mode": "serial",
+                "batchSize": 1
               },
               "type": "Microsoft.Network/virtualNetworks/subnets",
               "apiVersion": "2023-11-01",
