@@ -154,6 +154,7 @@ var bastionNetworkSecurityGroupRules = [
 
 var subnetResourceIds = {
   ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
+  routeServer: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'RouteServerSubnet')
 }
 
 module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
@@ -227,6 +228,44 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
     enableTelemetry: false
     tags: tags
   }
+}
+
+resource routeServerPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: 'pip-ars-onprem'
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  tags: tags
+}
+
+resource routeServer 'Microsoft.Network/virtualHubs@2023-11-01' = {
+  name: 'ars-onprem'
+  location: location
+  properties: {
+    sku: 'Standard'
+  }
+  tags: tags
+}
+
+resource routeServerIpConfiguration 'Microsoft.Network/virtualHubs/ipConfigurations@2023-11-01' = {
+  parent: routeServer
+  name: 'ipconfig1'
+  properties: {
+    subnet: {
+      id: subnetResourceIds.routeServer
+    }
+    publicIPAddress: {
+      id: routeServerPublicIp.id
+    }
+  }
+  dependsOn: [
+    virtualNetwork
+  ]
 }
 
 module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:0.11.1' = {
@@ -321,5 +360,6 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
 
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
+output routeServerResourceId string = routeServer.id
 output domainControllerPrivateIpAddress string = domainControllerPrivateIpAddress
 output adSubnetResourceId string = subnetResourceIds.ad

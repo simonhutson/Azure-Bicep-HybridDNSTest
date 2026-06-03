@@ -172,6 +172,14 @@ var firewallTransitAzureRoutes = [
     name: 'to-utilities'
     addressPrefix: '172.19.10.0/23'
   }
+  {
+    name: 'to-vcpe-corp'
+    addressPrefix: '172.19.80.96/28'
+  }
+  {
+    name: 'to-vcpe-iot'
+    addressPrefix: '172.19.80.112/28'
+  }
 ]
 
 var firewallTransitAzureAddressPrefixes = [for route in firewallTransitAzureRoutes: route.addressPrefix]
@@ -192,6 +200,8 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[3]
       firewallTransitAzureRoutes[4]
       firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
     ]
   }
   {
@@ -209,6 +219,8 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[3]
       firewallTransitAzureRoutes[4]
       firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
     ]
   }
   {
@@ -226,6 +238,8 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[3]
       firewallTransitAzureRoutes[4]
       firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
     ]
   }
   {
@@ -243,6 +257,8 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[2]
       firewallTransitAzureRoutes[4]
       firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
     ]
   }
   {
@@ -260,6 +276,8 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[2]
       firewallTransitAzureRoutes[3]
       firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
     ]
   }
   {
@@ -277,6 +295,46 @@ var azureFirewallRouteTableDefinitions = [
       firewallTransitAzureRoutes[2]
       firewallTransitAzureRoutes[3]
       firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[6]
+      firewallTransitAzureRoutes[7]
+    ]
+  }
+  {
+    name: 'rt-vcpe-corp'
+    subnetName: 'vcpe-corp'
+    subnetAddressPrefix: '172.19.80.96/28'
+    networkSecurityGroupName: 'nsg-vcpe-corp'
+    routes: [
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[7]
+    ]
+  }
+  {
+    name: 'rt-vcpe-iot'
+    subnetName: 'vcpe-iot'
+    subnetAddressPrefix: '172.19.80.112/28'
+    networkSecurityGroupName: 'nsg-vcpe-iot'
+    routes: [
+      {
+        name: 'to-onprem'
+        addressPrefix: onPremVirtualNetworkAddressPrefix
+      }
+      firewallTransitAzureRoutes[0]
+      firewallTransitAzureRoutes[1]
+      firewallTransitAzureRoutes[2]
+      firewallTransitAzureRoutes[3]
+      firewallTransitAzureRoutes[4]
+      firewallTransitAzureRoutes[5]
+      firewallTransitAzureRoutes[6]
     ]
   }
 ]
@@ -411,6 +469,7 @@ var platformSubnetDefinitions = [
 var subnetResourceIds = {
   dnsResolverInbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-inbound')
   dnsResolverOutbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-outbound')
+  routeServer: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'RouteServerSubnet')
   avd01: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'avd01')
   vcpeCorp: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'vcpe-corp')
 }
@@ -475,6 +534,44 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = {
     enableTelemetry: false
     tags: tags
   }
+}
+
+resource routeServerPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: 'pip-ars-azure'
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  tags: tags
+}
+
+resource routeServer 'Microsoft.Network/virtualHubs@2023-11-01' = {
+  name: 'ars-azure'
+  location: location
+  properties: {
+    sku: 'Standard'
+  }
+  tags: tags
+}
+
+resource routeServerIpConfiguration 'Microsoft.Network/virtualHubs/ipConfigurations@2023-11-01' = {
+  parent: routeServer
+  name: 'ipconfig1'
+  properties: {
+    subnet: {
+      id: subnetResourceIds.routeServer
+    }
+    publicIPAddress: {
+      id: routeServerPublicIp.id
+    }
+  }
+  dependsOn: [
+    virtualNetwork
+  ]
 }
 
 resource azureFirewallPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
@@ -794,6 +891,7 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
 
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
+output routeServerResourceId string = routeServer.id
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
 output firewallTransitAzureRoutes array = firewallTransitAzureRoutes

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "5103019048613105279"
+      "templateHash": "10405627404505192278"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "8727714269669007012"
+              "templateHash": "6059296027333525945"
             }
           },
           "parameters": {
@@ -359,10 +359,53 @@
               }
             ],
             "subnetResourceIds": {
-              "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]"
+              "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]",
+              "routeServer": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'RouteServerSubnet')]"
             }
           },
           "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "pip-ars-onprem",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualHubs",
+              "apiVersion": "2023-11-01",
+              "name": "ars-onprem",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": "Standard"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualHubs/ipConfigurations",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', 'ars-onprem', 'ipconfig1')]",
+              "properties": {
+                "subnet": {
+                  "id": "[variables('subnetResourceIds').routeServer]"
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-ars-onprem')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualHubs', 'ars-onprem')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-ars-onprem')]",
+                "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
+              ]
+            },
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
@@ -17091,6 +17134,10 @@
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vgw-onprem'), '2025-04-01').outputs.resourceId.value]"
             },
+            "routeServerResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualHubs', 'ars-onprem')]"
+            },
             "domainControllerPrivateIpAddress": {
               "type": "string",
               "value": "[variables('domainControllerPrivateIpAddress')]"
@@ -17149,7 +17196,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "18029979618299406875"
+              "templateHash": "14809900738226326492"
             }
           },
           "parameters": {
@@ -17364,6 +17411,14 @@
               {
                 "name": "to-utilities",
                 "addressPrefix": "172.19.10.0/23"
+              },
+              {
+                "name": "to-vcpe-corp",
+                "addressPrefix": "172.19.80.96/28"
+              },
+              {
+                "name": "to-vcpe-iot",
+                "addressPrefix": "172.19.80.112/28"
               }
             ],
             "azureFirewallRouteTableDefinitions": [
@@ -17381,7 +17436,9 @@
                   "[variables('firewallTransitAzureRoutes')[2]]",
                   "[variables('firewallTransitAzureRoutes')[3]]",
                   "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]"
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
                 ]
               },
               {
@@ -17398,7 +17455,9 @@
                   "[variables('firewallTransitAzureRoutes')[2]]",
                   "[variables('firewallTransitAzureRoutes')[3]]",
                   "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]"
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
                 ]
               },
               {
@@ -17415,7 +17474,9 @@
                   "[variables('firewallTransitAzureRoutes')[1]]",
                   "[variables('firewallTransitAzureRoutes')[3]]",
                   "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]"
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
                 ]
               },
               {
@@ -17432,7 +17493,9 @@
                   "[variables('firewallTransitAzureRoutes')[1]]",
                   "[variables('firewallTransitAzureRoutes')[2]]",
                   "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]"
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
                 ]
               },
               {
@@ -17449,7 +17512,9 @@
                   "[variables('firewallTransitAzureRoutes')[1]]",
                   "[variables('firewallTransitAzureRoutes')[2]]",
                   "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]"
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
                 ]
               },
               {
@@ -17466,7 +17531,47 @@
                   "[variables('firewallTransitAzureRoutes')[1]]",
                   "[variables('firewallTransitAzureRoutes')[2]]",
                   "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]"
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
+                ]
+              },
+              {
+                "name": "rt-vcpe-corp",
+                "subnetName": "vcpe-corp",
+                "subnetAddressPrefix": "172.19.80.96/28",
+                "networkSecurityGroupName": "nsg-vcpe-corp",
+                "routes": [
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[7]]"
+                ]
+              },
+              {
+                "name": "rt-vcpe-iot",
+                "subnetName": "vcpe-iot",
+                "subnetAddressPrefix": "172.19.80.112/28",
+                "networkSecurityGroupName": "nsg-vcpe-iot",
+                "routes": [
+                  {
+                    "name": "to-onprem",
+                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
+                  },
+                  "[variables('firewallTransitAzureRoutes')[0]]",
+                  "[variables('firewallTransitAzureRoutes')[1]]",
+                  "[variables('firewallTransitAzureRoutes')[2]]",
+                  "[variables('firewallTransitAzureRoutes')[3]]",
+                  "[variables('firewallTransitAzureRoutes')[4]]",
+                  "[variables('firewallTransitAzureRoutes')[5]]",
+                  "[variables('firewallTransitAzureRoutes')[6]]"
                 ]
               }
             ],
@@ -17590,6 +17695,7 @@
             "subnetResourceIds": {
               "dnsResolverInbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'dns-resolver-inbound')]",
               "dnsResolverOutbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'dns-resolver-outbound')]",
+              "routeServer": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'RouteServerSubnet')]",
               "avd01": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'avd01')]",
               "vcpeCorp": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'vcpe-corp')]"
             },
@@ -17605,6 +17711,48 @@
             ]
           },
           "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "pip-ars-azure",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualHubs",
+              "apiVersion": "2023-11-01",
+              "name": "ars-azure",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": "Standard"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/virtualHubs/ipConfigurations",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', 'ars-azure', 'ipconfig1')]",
+              "properties": {
+                "subnet": {
+                  "id": "[variables('subnetResourceIds').routeServer]"
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-ars-azure')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualHubs', 'ars-azure')]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'pip-ars-azure')]",
+                "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
+              ]
+            },
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2023-11-01",
@@ -37978,6 +38126,10 @@
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vgw-azure'), '2025-04-01').outputs.resourceId.value]"
             },
+            "routeServerResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualHubs', 'ars-azure')]"
+            },
             "privateDnsZoneResourceId": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', format('pdns-{0}', replace(parameters('privateDnsZoneName'), '.', '-'))), '2025-04-01').outputs.resourceId.value]"
@@ -39641,6 +39793,14 @@
     "azureVirtualNetworkResourceId": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.virtualNetworkResourceId.value]"
+    },
+    "onPremRouteServerResourceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.routeServerResourceId.value]"
+    },
+    "azureRouteServerResourceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.routeServerResourceId.value]"
     },
     "privateDnsZoneResourceId": {
       "type": "string",

@@ -146,6 +146,8 @@ module azureToOnPremConnection './modules/vpn-connection.bicep' = {
 
 output onPremVirtualNetworkResourceId string = onPrem.outputs.virtualNetworkResourceId
 output azureVirtualNetworkResourceId string = azure.outputs.virtualNetworkResourceId
+output onPremRouteServerResourceId string = onPrem.outputs.routeServerResourceId
+output azureRouteServerResourceId string = azure.outputs.routeServerResourceId
 output privateDnsZoneResourceId string = azure.outputs.privateDnsZoneResourceId
 output dnsResolverInboundEndpointPrivateIpAddress string = azure.outputs.dnsResolverInboundEndpointPrivateIpAddress
 output domainControllerPrivateIpAddress string = onPrem.outputs.domainControllerPrivateIpAddress

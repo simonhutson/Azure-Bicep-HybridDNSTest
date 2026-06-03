@@ -10,6 +10,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
 - Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` and `vm-azure02` on private-only NICs.
+- Azure Route Server in both `vnet-onprem` and `vnet-azure`.
 - Azure DNS Private Resolver with inbound endpoint `172.19.4.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
@@ -115,6 +116,6 @@ To preview changes:
 - The private DNS zone auto-registers only VMs in `vnet-azure`.
 - Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
 - Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.
-- `RouteServerSubnet` placeholders intentionally do not associate NSGs because Azure Route Server does not support NSGs on that subnet.
+- `RouteServerSubnet` subnets intentionally do not associate NSGs because Azure Route Server does not support NSGs on that subnet.
 - `AzureBastionSubnet` subnets use dedicated NSGs with the rules documented for Azure Bastion.
 - VPN gateways can take a long time to deploy.
