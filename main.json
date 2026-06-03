@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "16059716470895962950"
+      "templateHash": "7723979212105088032"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "6059296027333525945"
+              "templateHash": "15890418491400795346"
             }
           },
           "parameters": {
@@ -238,7 +238,7 @@
           "variables": {
             "virtualNetworkName": "vnet-onprem",
             "domainControllerName": "vm-onprem01",
-            "domainControllerPrivateIpAddress": "10.0.4.4",
+            "domainControllerPrivateIpAddress": "10.0.5.4",
             "adSubnetName": "ad",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
             "addsConfigurationVersion": "2026-06-02.1",
@@ -1760,8 +1760,12 @@
                     "value": [
                       {
                         "name": "[variables('adSubnetName')]",
-                        "addressPrefix": "10.0.4.0/24",
+                        "addressPrefix": "10.0.5.0/24",
                         "networkSecurityGroupResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'nsg-ad'), '2025-04-01').outputs.resourceId.value]"
+                      },
+                      {
+                        "name": "VirtualNetworkApplianceSubnet",
+                        "addressPrefix": "10.0.4.0/24"
                       },
                       {
                         "name": "RouteServerSubnet",
@@ -17196,7 +17200,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "6065473692494694670"
+              "templateHash": "7377237245555905185"
             }
           },
           "parameters": {
@@ -17269,7 +17273,7 @@
             ],
             "virtualNetworkName": "vnet-azure",
             "bastionNetworkSecurityGroupName": "nsg-azure-bastion",
-            "dnsResolverInboundEndpointPrivateIpAddress": "172.19.4.4",
+            "dnsResolverInboundEndpointPrivateIpAddress": "172.19.5.4",
             "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
             "bastionNetworkSecurityGroupRules": [
@@ -17666,13 +17670,17 @@
             "platformSubnetDefinitions": [
               {
                 "name": "dns-resolver-inbound",
-                "addressPrefix": "172.19.4.0/25",
+                "addressPrefix": "172.19.5.0/25",
                 "delegation": "Microsoft.Network/dnsResolvers"
               },
               {
                 "name": "dns-resolver-outbound",
-                "addressPrefix": "172.19.4.128/25",
+                "addressPrefix": "172.19.5.128/25",
                 "delegation": "Microsoft.Network/dnsResolvers"
+              },
+              {
+                "name": "VirtualNetworkApplianceSubnet",
+                "addressPrefix": "172.19.4.0/24"
               },
               {
                 "name": "RouteServerSubnet",
@@ -38404,7 +38412,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "2403490376682640229"
+              "templateHash": "16108227409182286566"
             }
           },
           "parameters": {
@@ -38438,7 +38446,7 @@
           "variables": {
             "virtualNetworkName": "vnet-onprem",
             "adSubnetName": "ad",
-            "adSubnetAddressPrefix": "10.0.4.0/24",
+            "adSubnetAddressPrefix": "10.0.5.0/24",
             "adNetworkSecurityGroupName": "nsg-ad"
           },
           "resources": [

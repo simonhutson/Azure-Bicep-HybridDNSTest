@@ -30,7 +30,7 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-onprem'
 var domainControllerName = 'vm-onprem01'
-var domainControllerPrivateIpAddress = '10.0.4.4'
+var domainControllerPrivateIpAddress = '10.0.5.4'
 var adSubnetName = 'ad'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var addsConfigurationVersion = '2026-06-02.1'
@@ -193,8 +193,12 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
     subnets: [
       {
         name: adSubnetName
-        addressPrefix: '10.0.4.0/24'
+        addressPrefix: '10.0.5.0/24'
         networkSecurityGroupResourceId: adNetworkSecurityGroup.outputs.resourceId
+      }
+      {
+        name: 'VirtualNetworkApplianceSubnet'
+        addressPrefix: '10.0.4.0/24'
       }
       {
         name: 'RouteServerSubnet'

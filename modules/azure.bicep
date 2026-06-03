@@ -27,7 +27,7 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
 var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
-var dnsResolverInboundEndpointPrivateIpAddress = '172.19.4.4'
+var dnsResolverInboundEndpointPrivateIpAddress = '172.19.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 
@@ -439,13 +439,17 @@ var customSubnetDefinitions = [for subnet in customSubnets: union({
 var platformSubnetDefinitions = [
   {
     name: 'dns-resolver-inbound'
-    addressPrefix: '172.19.4.0/25'
+    addressPrefix: '172.19.5.0/25'
     delegation: 'Microsoft.Network/dnsResolvers'
   }
   {
     name: 'dns-resolver-outbound'
-    addressPrefix: '172.19.4.128/25'
+    addressPrefix: '172.19.5.128/25'
     delegation: 'Microsoft.Network/dnsResolvers'
+  }
+  {
+    name: 'VirtualNetworkApplianceSubnet'
+    addressPrefix: '172.19.4.0/24'
   }
   {
     name: 'RouteServerSubnet'
