@@ -702,6 +702,23 @@ resource azureFirewallRouteTables 'Microsoft.Network/routeTables@2023-11-01' = [
   tags: tags
 }]
 
+resource gatewaySubnetFirewallTransitRouteTable 'Microsoft.Network/routeTables@2023-11-01' = {
+  name: 'rt-gateway-to-firewall-transit'
+  location: location
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [for route in firewallTransitAzureRoutes: {
+      name: route.name
+      properties: {
+        addressPrefix: route.addressPrefix
+        nextHopType: 'VirtualAppliance'
+        nextHopIpAddress: azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
+      }
+    }]
+  }
+  tags: tags
+}
+
 @batchSize(1)
 resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = [for (routeTable, routeTableIndex) in azureFirewallRouteTableDefinitions: {
   name: '${virtualNetworkName}/${routeTable.subnetName}'
@@ -715,6 +732,19 @@ resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNet
     }
   }
 }]
+
+resource gatewaySubnetFirewallTransitRouteTableAssociation 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = {
+  name: '${virtualNetworkName}/GatewaySubnet'
+  properties: {
+    addressPrefix: '172.19.0.0/24'
+    routeTable: {
+      id: gatewaySubnetFirewallTransitRouteTable.id
+    }
+  }
+  dependsOn: [
+    azureFirewallRouteTableSubnetAssociations
+  ]
+}
 
 resource dnsResolver 'Microsoft.Network/dnsResolvers@2025-05-01' = {
   name: 'dnspr-azure'
@@ -887,6 +917,9 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
     enableTelemetry: false
     tags: tags
   }
+  dependsOn: [
+    gatewaySubnetFirewallTransitRouteTableAssociation
+  ]
 }
 
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId

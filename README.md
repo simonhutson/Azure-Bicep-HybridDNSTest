@@ -17,7 +17,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Azure Firewall Standard and Azure Bastion Developer.
 - Dedicated NSGs for each `AzureBastionSubnet` with the Microsoft-documented Azure Bastion inbound and outbound rules.
 - Azure Compute Gallery VM Application definition for an Ubuntu SD-WAN/router-style appliance bootstrap package.
-- Route tables that force requested Azure subnet-to-subnet and on-prem traffic through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
+- Route tables that force requested Azure subnet-to-subnet traffic and on-prem ingress through Azure Firewall, plus an on-prem route table for return traffic to those Azure subnets.
 - VNet-to-VNet IPsec VPN gateways and bidirectional connections.
 - NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
 - No VM NIC creates or attaches a public IP address.

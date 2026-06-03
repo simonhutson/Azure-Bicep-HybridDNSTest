@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "10405627404505192278"
+      "templateHash": "16059716470895962950"
     }
   },
   "parameters": {
@@ -17196,7 +17196,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "14809900738226326492"
+              "templateHash": "6065473692494694670"
             }
           },
           "parameters": {
@@ -17907,6 +17907,33 @@
               ]
             },
             {
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-11-01",
+              "name": "rt-gateway-to-firewall-transit",
+              "location": "[parameters('location')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "routes",
+                    "count": "[length(variables('firewallTransitAzureRoutes'))]",
+                    "input": {
+                      "name": "[variables('firewallTransitAzureRoutes')[copyIndex('routes')].name]",
+                      "properties": {
+                        "addressPrefix": "[variables('firewallTransitAzureRoutes')[copyIndex('routes')].addressPrefix]",
+                        "nextHopType": "VirtualAppliance",
+                        "nextHopIpAddress": "[reference(resourceId('Microsoft.Network/azureFirewalls', 'afw-azure-standard'), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+                      }
+                    }
+                  }
+                ],
+                "disableBgpRoutePropagation": false
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/azureFirewalls', 'afw-azure-standard')]"
+              ]
+            },
+            {
               "copy": {
                 "name": "azureFirewallRouteTableSubnetAssociations",
                 "count": "[length(variables('azureFirewallRouteTableDefinitions'))]",
@@ -17927,6 +17954,21 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/GatewaySubnet', variables('virtualNetworkName'))]",
+              "properties": {
+                "addressPrefix": "172.19.0.0/24",
+                "routeTable": {
+                  "id": "[resourceId('Microsoft.Network/routeTables', 'rt-gateway-to-firewall-transit')]"
+                }
+              },
+              "dependsOn": [
+                "azureFirewallRouteTableSubnetAssociations",
+                "[resourceId('Microsoft.Network/routeTables', 'rt-gateway-to-firewall-transit')]"
               ]
             },
             {
@@ -38113,6 +38155,7 @@
                 }
               },
               "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(format('{0}/GatewaySubnet', variables('virtualNetworkName')), '/')[0], split(format('{0}/GatewaySubnet', variables('virtualNetworkName')), '/')[1])]",
                 "[resourceId('Microsoft.Resources/deployments', variables('virtualNetworkName'))]"
               ]
             }
