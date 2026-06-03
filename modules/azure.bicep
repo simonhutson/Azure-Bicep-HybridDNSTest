@@ -722,6 +722,7 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
     location: location
     availabilityZone: -1
     osType: 'Windows'
+    licenseType: 'Windows_Server'
     vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "7972403032822751196"
+      "templateHash": "5103019048613105279"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "15714122258252141203"
+              "templateHash": "8727714269669007012"
             }
           },
           "parameters": {
@@ -7646,6 +7646,9 @@
                   },
                   "osType": {
                     "value": "Windows"
+                  },
+                  "licenseType": {
+                    "value": "Windows_Server"
                   },
                   "vmSize": {
                     "value": "[parameters('vmSize')]"
@@ -17146,7 +17149,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "12731151993684091233"
+              "templateHash": "18029979618299406875"
             }
           },
           "parameters": {
@@ -26169,6 +26172,9 @@
                   },
                   "osType": {
                     "value": "Windows"
+                  },
+                  "licenseType": {
+                    "value": "Windows_Server"
                   },
                   "vmSize": {
                     "value": "[parameters('vmSize')]"
