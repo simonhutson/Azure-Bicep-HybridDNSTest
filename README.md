@@ -26,6 +26,8 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 - [main.bicep](main.bicep): subscription-scope entry point.
 - [deploy.ps1](deploy.ps1): PowerShell deployment helper.
+- [disassociate-vnet-azure-route-tables.ps1](disassociate-vnet-azure-route-tables.ps1): standalone helper to disassociate route tables from `vnet-azure` subnets.
+- [associate-vnet-azure-route-tables.ps1](associate-vnet-azure-route-tables.ps1): standalone helper to associate the existing `vnet-azure` route tables to their expected subnets.
 - [main.bicepparam](main.bicepparam): optional sample parameters.
 - [modules/onprem.bicep](modules/onprem.bicep): simulated on-prem network, Bastion, VPN gateway, and domain controller.
 - [modules/azure.bicep](modules/azure.bicep): simulated Azure network, DNS resolver, firewall, Bastion, private DNS zone, and VPN gateway.
@@ -112,6 +114,13 @@ To preview changes:
 
 ```powershell
 .\deploy.ps1 -WhatIf
+```
+
+To temporarily remove the route table associations from all `vnet-azure` subnets and then reassociate the existing lab route tables:
+
+```powershell
+.\disassociate-vnet-azure-route-tables.ps1
+.\associate-vnet-azure-route-tables.ps1
 ```
 
 ## Notes
