@@ -288,7 +288,8 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
       3
     ]
     clusterSettings: {
-      clusterMode: 'activePassiveNoBgp'
+      clusterMode: 'activeActiveNoBgp'
+      secondPipName: 'vgw-onprem-zonal-pip2'
     }
     virtualNetworkResourceId: virtualNetwork.outputs.resourceId
     enableTelemetry: false

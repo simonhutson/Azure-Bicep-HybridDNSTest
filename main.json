@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "7723979212105088032"
+      "templateHash": "18042936930434363598"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "15890418491400795346"
+              "templateHash": "1268946675086836229"
             }
           },
           "parameters": {
@@ -5334,7 +5334,8 @@
                   },
                   "clusterSettings": {
                     "value": {
-                      "clusterMode": "activePassiveNoBgp"
+                      "clusterMode": "activeActiveNoBgp",
+                      "secondPipName": "vgw-onprem-zonal-pip2"
                     }
                   },
                   "virtualNetworkResourceId": {
@@ -17200,7 +17201,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7377237245555905185"
+              "templateHash": "7613196189564965246"
             }
           },
           "parameters": {
@@ -35831,7 +35832,8 @@
                   },
                   "clusterSettings": {
                     "value": {
-                      "clusterMode": "activePassiveNoBgp"
+                      "clusterMode": "activeActiveNoBgp",
+                      "secondPipName": "vgw-azure-zonal-pip2"
                     }
                   },
                   "virtualNetworkResourceId": {
