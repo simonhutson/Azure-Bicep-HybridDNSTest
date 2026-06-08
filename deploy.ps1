@@ -18,6 +18,7 @@ param(
     [string]$AdminUsername = 'azureadmin',
     [string]$VmSize = 'Standard_D2ads_v5',
     [string]$PrivateDnsZoneName = 'contoso.azure',
+    [string]$ActiveDirectoryDomainName = 'contoso.onprem',
     [ValidateLength(1, 15)]
     [string]$ActiveDirectoryNetbiosName = 'CONTOSO',
     [string]$SubscriptionId = $env:AZURE_SUBSCRIPTION_ID,
@@ -31,7 +32,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$deployScriptVersion = '2026-06-02.2'
+$deployScriptVersion = '2026-06-08.1'
 
 Write-Host "Running deploy.ps1 version $deployScriptVersion from '$PSCommandPath'."
 
@@ -529,6 +530,73 @@ function New-UbuntuRouterVmApplicationPackageUri {
     }
 }
 
+function Wait-OnPremDomainControllerReady {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$VmName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DomainName,
+
+        [ValidateRange(1, 180)]
+        [int]$TimeoutMinutes = 45
+    )
+
+    $deadline = (Get-Date).ToUniversalTime().AddMinutes($TimeoutMinutes)
+    $attempt = 1
+    $verificationScript = @'
+param([string]$ExpectedDomainName)
+
+$ErrorActionPreference = 'Stop'
+$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+
+if (($computerSystem.DomainRole -lt 4) -or ($computerSystem.Domain -ine $ExpectedDomainName)) {
+    throw "VM is not yet a domain controller for $ExpectedDomainName. Current domain role: $($computerSystem.DomainRole); current domain: $($computerSystem.Domain)."
+}
+
+Import-Module ActiveDirectory -ErrorAction Stop
+$domain = Get-ADDomain -ErrorAction Stop
+
+if ($domain.DNSRoot -ine $ExpectedDomainName) {
+    throw "Active Directory domain '$($domain.DNSRoot)' does not match expected domain '$ExpectedDomainName'."
+}
+
+Write-Output "AD_READY:$($domain.DNSRoot):$env:COMPUTERNAME"
+'@
+
+    while ($true) {
+        Write-Host "Checking Active Directory forest readiness on '$VmName' (attempt $attempt)..."
+        $output = & az vm run-command invoke `
+            --resource-group $ResourceGroupName `
+            --name $VmName `
+            --command-id RunPowerShellScript `
+            --scripts $verificationScript `
+            --parameters "ExpectedDomainName=$DomainName" `
+            --query 'value[0].message' `
+            --output tsv `
+            --only-show-errors 2>&1
+        $exitCode = $LASTEXITCODE
+
+        $outputText = ConvertTo-AzCliOutputText -Output $output
+        if (($exitCode -eq 0) -and ($outputText -match 'AD_READY:')) {
+            Write-AzCliOutput -Output $output
+            return
+        }
+
+        $remainingSeconds = [int][Math]::Ceiling(($deadline - (Get-Date).ToUniversalTime()).TotalSeconds)
+        if ($remainingSeconds -le 0) {
+            throw "Active Directory forest '$DomainName' did not become ready on VM '$VmName' within $TimeoutMinutes minutes. Last Azure Run Command output: $outputText"
+        }
+
+        Write-Host "Active Directory forest is not ready yet. Waiting 30 seconds before retry $($attempt + 1)..."
+        Start-Sleep -Seconds 30
+        $attempt++
+    }
+}
+
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
     throw 'Azure CLI was not found. Install Azure CLI before running this script.'
 }
@@ -633,6 +701,7 @@ try {
             domainSafeModeAdminPassword = @{ value = (ConvertTo-PlainText -SecureValue $DomainSafeModeAdminPassword) }
             vpnSharedKey = @{ value = (ConvertTo-PlainText -SecureValue $VpnSharedKey) }
             privateDnsZoneName = @{ value = $PrivateDnsZoneName }
+            activeDirectoryDomainName = @{ value = $ActiveDirectoryDomainName }
             activeDirectoryNetbiosName = @{ value = $ActiveDirectoryNetbiosName }
             tags = @{
                 value = @{
@@ -673,6 +742,11 @@ try {
     Invoke-AzDeploymentCommand `
         -Description "Starting subscription deployment '$DeploymentName' in $Location..." `
         -Arguments (@('deployment', 'sub', 'create') + $commonArguments)
+
+    Wait-OnPremDomainControllerReady `
+        -ResourceGroupName $OnPremResourceGroupName `
+        -VmName 'vm-onprem01' `
+        -DomainName $ActiveDirectoryDomainName
 }
 finally {
     if (Test-Path -Path $tempParametersFile -PathType Leaf) {

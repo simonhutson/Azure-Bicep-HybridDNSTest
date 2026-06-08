@@ -79,6 +79,12 @@ The VM size defaults to `Standard_D2ads_v5` and can be overridden:
 .\deploy.ps1 -VmSize 'Standard_D4ads_v5'
 ```
 
+The Active Directory DNS domain name defaults to `contoso.onprem` and can be overridden along with the NetBIOS name:
+
+```powershell
+.\deploy.ps1 -ActiveDirectoryDomainName 'corp.example' -ActiveDirectoryNetbiosName 'CORP'
+```
+
 The Ubuntu SD-WAN/router VM Application creates the gallery and application by default. During a real deployment, the script packages the local artifact, creates or reuses a private blob container in `rg-azure`, uploads the zip with Microsoft Entra authentication, generates a temporary read-only user delegation SAS URI, and passes it to the deployment:
 
 ```powershell
@@ -112,7 +118,7 @@ To preview changes:
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Private DNS, VPN gateways, gateway connections, and the Windows VM. Azure Firewall and DNS Resolver resources are deployed directly where the template needs tighter control.
 - The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.5.4`.
-- `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration.
+- `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, then reboots once to complete AD DS configuration. `deploy.ps1` waits for the VM to report that the Active Directory forest is ready before it exits.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
 - The Ubuntu router VM Application package installs FRR, WireGuard, strongSwan, and forwarding defaults. It does not configure BGP peers, tunnel keys, or route policy.
 - The private DNS zone auto-registers only VMs in `vnet-azure`.

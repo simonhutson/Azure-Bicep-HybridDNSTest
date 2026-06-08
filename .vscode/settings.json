@@ -6,6 +6,8 @@
         "Get-Item": true,
         "R": true,
         "Group-Object": true,
-        "GetRange": true
+        "GetRange": true,
+        "Resolve-Path": true,
+        "Out-Null": true
     }
 }

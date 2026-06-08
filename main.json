@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "18042936930434363598"
+      "templateHash": "14683235976687584665"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "1268946675086836229"
+              "templateHash": "7449589260147060444"
             }
           },
           "parameters": {
@@ -241,8 +241,9 @@
             "domainControllerPrivateIpAddress": "10.0.5.4",
             "adSubnetName": "ad",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
-            "addsConfigurationVersion": "2026-06-02.1",
-            "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& {{ $ErrorActionPreference = `\"Stop`\"; $domainName = `\"{0}`\"; $netbiosName = `\"{1}`\"; $safeModePassword = ConvertTo-SecureString `\"{2}`\" -AsPlainText -Force; if (Get-Service -Name NTDS -ErrorAction SilentlyContinue) {{ Write-Host `\"Domain controller role already configured.`\"; exit 0 }}; Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools; Import-Module ADDSDeployment; Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion; New-Item -Path C:/AzureData -ItemType Directory -Force | Out-Null; Set-Content -Path C:/AzureData/adds-promotion-requested.txt -Value (Get-Date -Format o); shutdown.exe /r /t 30 /c `\"Completing AD DS forest promotion`\"; exit 0 }}\"', parameters('activeDirectoryDomainName'), parameters('activeDirectoryNetbiosName'), parameters('domainSafeModeAdminPassword'))]",
+            "addsConfigurationVersion": "2026-06-08.1",
+            "configureAddsScript": "[format('$ErrorActionPreference = ''Stop''\r\n\r\nfunction ConvertFrom-Utf8Base64 {{\r\n  param([Parameter(Mandatory = $true)][string] $Value)\r\n  [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Value))\r\n}}\r\n\r\n$domainName = ConvertFrom-Utf8Base64 ''{0}''\r\n$netbiosName = ConvertFrom-Utf8Base64 ''{1}''\r\n$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 ''{2}'') -AsPlainText -Force\r\n$statePath = ''C:\\AzureData''\r\n\r\nNew-Item -Path $statePath -ItemType Directory -Force | Out-Null\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{\r\n  Write-Host \"Domain controller role is already configured for $domainName.\"\r\n  exit 0\r\n}}\r\n\r\n$adDsFeature = Get-WindowsFeature -Name AD-Domain-Services\r\nif (-not $adDsFeature.Installed) {{\r\n  Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools\r\n}}\r\n\r\nImport-Module ADDSDeployment\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif ($computerSystem.DomainRole -lt 4) {{\r\n  Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion\r\n  Set-Content -Path (Join-Path $statePath ''adds-promotion-requested.txt'') -Value (Get-Date -Format o)\r\n  shutdown.exe /r /t 30 /c ''Completing AD DS forest promotion''\r\n}}\r\n', base64(parameters('activeDirectoryDomainName')), base64(parameters('activeDirectoryNetbiosName')), base64(parameters('domainSafeModeAdminPassword')))]",
+            "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}'')); Invoke-Expression $script\"\r\n', base64(variables('configureAddsScript')))]",
             "bastionNetworkSecurityGroupRules": [
               {
                 "name": "AllowHttpsInbound",
