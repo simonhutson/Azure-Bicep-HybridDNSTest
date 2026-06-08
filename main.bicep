@@ -107,17 +107,6 @@ module ubuntuRouterVmApplication './modules/ubuntu-router-vm-application.bicep' 
   }
 }
 
-module onPremRoutes './modules/onprem-routes.bicep' = {
-  name: 'onprem-route-tables'
-  scope: onPremResourceGroup
-  params: {
-    location: location
-    azureFirewallPrivateIpAddress: azure.outputs.azureFirewallPrivateIpAddress
-    azureFirewallTransitRoutes: azure.outputs.firewallTransitAzureRoutes
-    tags: tags
-  }
-}
-
 module onPremToAzureConnection './modules/vpn-connection.bicep' = {
   name: 'onprem-to-azure-vpn-connection'
   scope: onPremResourceGroup
@@ -151,6 +140,5 @@ output azureRouteServerResourceId string = azure.outputs.routeServerResourceId
 output privateDnsZoneResourceId string = azure.outputs.privateDnsZoneResourceId
 output dnsResolverInboundEndpointPrivateIpAddress string = azure.outputs.dnsResolverInboundEndpointPrivateIpAddress
 output domainControllerPrivateIpAddress string = onPrem.outputs.domainControllerPrivateIpAddress
-output onPremRouteTableResourceId string = onPremRoutes.outputs.routeTableResourceId
 output ubuntuRouterVmApplicationResourceId string = ubuntuRouterVmApplication.outputs.applicationResourceId
 output ubuntuRouterVmApplicationVersionResourceId string = ubuntuRouterVmApplication.outputs.applicationVersionResourceId
