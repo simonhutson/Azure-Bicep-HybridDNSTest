@@ -7,7 +7,7 @@ param location string = resourceGroup().location
 param adminUsername string
 
 @description('Azure VM size used for the domain controller VM.')
-param vmSize string = 'Standard_D2ads_v5'
+param vmSize string = 'Standard_D4ads_v5'
 
 @secure()
 @description('Administrator password for the domain controller VM.')
