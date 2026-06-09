@@ -34,6 +34,12 @@ var domainControllerPrivateIpAddress = '10.0.5.4'
 var adSubnetName = 'ad'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var addsConfigurationVersion = '2026-06-09.1'
+var windowsServerGeneration2ImageReference = {
+  publisher: 'MicrosoftWindowsServer'
+  offer: 'WindowsServer'
+  sku: '2025-datacenter-azure-edition'
+  version: 'latest'
+}
 var configureAddsScript = format('''
 $ErrorActionPreference = 'Stop'
 
@@ -364,15 +370,13 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
     availabilityZone: -1
     osType: 'Windows'
     licenseType: 'Windows_Server'
+    securityType: 'TrustedLaunch'
+    secureBootEnabled: true
+    vTpmEnabled: true
     vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword
-    imageReference: {
-      publisher: 'MicrosoftWindowsServer'
-      offer: 'WindowsServer'
-      sku: '2025-datacenter-azure-edition'
-      version: 'latest'
-    }
+    imageReference: windowsServerGeneration2ImageReference
     osDisk: {
       caching: 'ReadWrite'
       createOption: 'FromImage'

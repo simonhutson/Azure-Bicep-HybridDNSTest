@@ -31,6 +31,12 @@ var dnsResolverInboundEndpointPrivateIpAddress = '172.19.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 var windowsGuestConfigurationVersion = '2026-06-09.1'
+var windowsServerGeneration2ImageReference = {
+  publisher: 'MicrosoftWindowsServer'
+  offer: 'WindowsServer'
+  sku: '2025-datacenter-azure-edition'
+  version: 'latest'
+}
 var configureWindowsGuestScript = '''
 $ErrorActionPreference = 'Stop'
 
@@ -884,15 +890,13 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
     availabilityZone: -1
     osType: 'Windows'
     licenseType: 'Windows_Server'
+    securityType: 'TrustedLaunch'
+    secureBootEnabled: true
+    vTpmEnabled: true
     vmSize: vmSize
     adminUsername: adminUsername
     adminPassword: adminPassword
-    imageReference: {
-      publisher: 'MicrosoftWindowsServer'
-      offer: 'WindowsServer'
-      sku: '2025-datacenter-azure-edition'
-      version: 'latest'
-    }
+    imageReference: windowsServerGeneration2ImageReference
     osDisk: {
       caching: 'ReadWrite'
       createOption: 'FromImage'

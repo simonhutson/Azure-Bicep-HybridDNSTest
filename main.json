@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "11914973410265984634"
+      "templateHash": "10389713602193337659"
     }
   },
   "parameters": {
@@ -154,7 +154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16498871690106189033"
+              "templateHash": "10852971555215475957"
             }
           },
           "parameters": {
@@ -173,7 +173,7 @@
             },
             "vmSize": {
               "type": "string",
-              "defaultValue": "Standard_D2ads_v5",
+              "defaultValue": "Standard_D4ads_v5",
               "metadata": {
                 "description": "Azure VM size used for the domain controller VM."
               }
@@ -221,6 +221,12 @@
             "adSubnetName": "ad",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
             "addsConfigurationVersion": "2026-06-09.1",
+            "windowsServerGeneration2ImageReference": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2025-datacenter-azure-edition",
+              "version": "latest"
+            },
             "configureAddsScript": "[format('$ErrorActionPreference = ''Stop''\r\n\r\nfunction ConvertFrom-Utf8Base64 {{\r\n  param([Parameter(Mandatory = $true)][string] $Value)\r\n  [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Value))\r\n}}\r\n\r\n$domainName = ConvertFrom-Utf8Base64 ''{0}''\r\n$netbiosName = ConvertFrom-Utf8Base64 ''{1}''\r\n$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 ''{2}'') -AsPlainText -Force\r\n$statePath = ''C:\\AzureData''\r\n\r\nNew-Item -Path $statePath -ItemType Directory -Force | Out-Null\r\n\r\n$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)\r\nforeach ($networkProfile in $networkProfiles) {{\r\n  if ($networkProfile.NetworkCategory -eq ''Public'') {{\r\n    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private\r\n  }}\r\n}}\r\n\r\nif (-not (Get-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -ErrorAction SilentlyContinue)) {{\r\n  New-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -DisplayName ''Hybrid DNS Lab - Allow ICMPv4 Inbound'' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null\r\n}}\r\nelse {{\r\n  Set-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}}\r\n\r\nif (-not (Get-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -ErrorAction SilentlyContinue)) {{\r\n  New-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -DisplayName ''Hybrid DNS Lab - Allow ICMPv6 Inbound'' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null\r\n}}\r\nelse {{\r\n  Set-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}}\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{\r\n  Write-Host \"Domain controller role is already configured for $domainName.\"\r\n  exit 0\r\n}}\r\n\r\n$adDsFeature = Get-WindowsFeature -Name AD-Domain-Services\r\nif (-not $adDsFeature.Installed) {{\r\n  Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools\r\n}}\r\n\r\nImport-Module ADDSDeployment\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif ($computerSystem.DomainRole -lt 4) {{\r\n  Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion\r\n  Set-Content -Path (Join-Path $statePath ''adds-promotion-requested.txt'') -Value (Get-Date -Format o)\r\n  shutdown.exe /r /t 30 /c ''Completing AD DS forest promotion''\r\n}}\r\n', base64(parameters('activeDirectoryDomainName')), base64(parameters('activeDirectoryNetbiosName')), base64(parameters('domainSafeModeAdminPassword')))]",
             "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}'')); Invoke-Expression $script\"\r\n', base64(variables('configureAddsScript')))]",
             "bastionNetworkSecurityGroupRules": [
@@ -7678,6 +7684,15 @@
                   "licenseType": {
                     "value": "Windows_Server"
                   },
+                  "securityType": {
+                    "value": "TrustedLaunch"
+                  },
+                  "secureBootEnabled": {
+                    "value": true
+                  },
+                  "vTpmEnabled": {
+                    "value": true
+                  },
                   "vmSize": {
                     "value": "[parameters('vmSize')]"
                   },
@@ -7688,12 +7703,7 @@
                     "value": "[parameters('adminPassword')]"
                   },
                   "imageReference": {
-                    "value": {
-                      "publisher": "MicrosoftWindowsServer",
-                      "offer": "WindowsServer",
-                      "sku": "2025-datacenter-azure-edition",
-                      "version": "latest"
-                    }
+                    "value": "[variables('windowsServerGeneration2ImageReference')]"
                   },
                   "osDisk": {
                     "value": {
@@ -17181,7 +17191,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "10828134602151363717"
+              "templateHash": "7949780167896038519"
             }
           },
           "parameters": {
@@ -17200,7 +17210,7 @@
             },
             "vmSize": {
               "type": "string",
-              "defaultValue": "Standard_D2ads_v5",
+              "defaultValue": "Standard_D4ads_v5",
               "metadata": {
                 "description": "Azure VM size used for Azure test VMs."
               }
@@ -17258,6 +17268,12 @@
             "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
             "windowsGuestConfigurationVersion": "2026-06-09.1",
+            "windowsServerGeneration2ImageReference": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2025-datacenter-azure-edition",
+              "version": "latest"
+            },
             "configureWindowsGuestScript": "$ErrorActionPreference = 'Stop'\r\n\r\n$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)\r\nforeach ($networkProfile in $networkProfiles) {\r\n  if ($networkProfile.NetworkCategory -eq 'Public') {\r\n    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private\r\n  }\r\n}\r\n\r\nif (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -ErrorAction SilentlyContinue)) {\r\n  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv4 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null\r\n}\r\nelse {\r\n  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}\r\n\r\nif (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -ErrorAction SilentlyContinue)) {\r\n  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv6 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null\r\n}\r\nelse {\r\n  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}\r\n",
             "configureWindowsGuestCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}'')); Invoke-Expression $script\"\r\n', base64(variables('configureWindowsGuestScript')))]",
             "bastionNetworkSecurityGroupRules": [
@@ -26360,6 +26376,15 @@
                   "licenseType": {
                     "value": "Windows_Server"
                   },
+                  "securityType": {
+                    "value": "TrustedLaunch"
+                  },
+                  "secureBootEnabled": {
+                    "value": true
+                  },
+                  "vTpmEnabled": {
+                    "value": true
+                  },
                   "vmSize": {
                     "value": "[parameters('vmSize')]"
                   },
@@ -26370,12 +26395,7 @@
                     "value": "[parameters('adminPassword')]"
                   },
                   "imageReference": {
-                    "value": {
-                      "publisher": "MicrosoftWindowsServer",
-                      "offer": "WindowsServer",
-                      "sku": "2025-datacenter-azure-edition",
-                      "version": "latest"
-                    }
+                    "value": "[variables('windowsServerGeneration2ImageReference')]"
                   },
                   "osDisk": {
                     "value": {

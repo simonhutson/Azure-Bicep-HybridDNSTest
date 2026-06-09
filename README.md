@@ -10,6 +10,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
 - Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` at `172.19.80.100` and `vm-azure02` at `172.19.40.4` on private-only NICs, configured with a Private Windows network profile and inbound ICMP allowed in Windows Firewall.
+- All Windows VMs use the Hyper-V Generation 2 Windows Server 2025 Azure Edition image and Trusted Launch with Secure Boot and vTPM enabled.
 - Azure Route Server in both `vnet-onprem` and `vnet-azure`.
 - Azure DNS Private Resolver with inbound endpoint `172.19.5.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
