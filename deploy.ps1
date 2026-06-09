@@ -16,7 +16,7 @@ param(
     [ValidateRange(0, 1800)]
     [int]$VmApplicationStorageRolePropagationWaitSeconds = 300,
     [string]$AdminUsername = 'azureadmin',
-    [string]$VmSize = 'Standard_D2ads_v5',
+    [string]$VmSize = 'Standard_D4ads_v5',
     [string]$PrivateDnsZoneName = 'contoso.azure',
     [string]$ActiveDirectoryDomainName = 'contoso.onprem',
     [ValidateLength(1, 15)]

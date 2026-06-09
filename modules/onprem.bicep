@@ -33,7 +33,7 @@ var domainControllerName = 'vm-onprem01'
 var domainControllerPrivateIpAddress = '10.0.5.4'
 var adSubnetName = 'ad'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
-var addsConfigurationVersion = '2026-06-08.1'
+var addsConfigurationVersion = '2026-06-09.1'
 var configureAddsScript = format('''
 $ErrorActionPreference = 'Stop'
 
@@ -48,6 +48,27 @@ $safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 '{2}') -AsPla
 $statePath = 'C:\AzureData'
 
 New-Item -Path $statePath -ItemType Directory -Force | Out-Null
+
+$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)
+foreach ($networkProfile in $networkProfiles) {{
+  if ($networkProfile.NetworkCategory -eq 'Public') {{
+    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private
+  }}
+}}
+
+if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -ErrorAction SilentlyContinue)) {{
+  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv4 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null
+}}
+else {{
+  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
+}}
+
+if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -ErrorAction SilentlyContinue)) {{
+  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv6 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null
+}}
+else {{
+  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
+}}
 
 $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
 if (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{

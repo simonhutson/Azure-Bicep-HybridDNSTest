@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "17447880373042885358"
+      "templateHash": "14004690607245727123"
     }
   },
   "parameters": {
@@ -175,7 +175,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7449589260147060444"
+              "templateHash": "16498871690106189033"
             }
           },
           "parameters": {
@@ -241,8 +241,8 @@
             "domainControllerPrivateIpAddress": "10.0.5.4",
             "adSubnetName": "ad",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
-            "addsConfigurationVersion": "2026-06-08.1",
-            "configureAddsScript": "[format('$ErrorActionPreference = ''Stop''\r\n\r\nfunction ConvertFrom-Utf8Base64 {{\r\n  param([Parameter(Mandatory = $true)][string] $Value)\r\n  [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Value))\r\n}}\r\n\r\n$domainName = ConvertFrom-Utf8Base64 ''{0}''\r\n$netbiosName = ConvertFrom-Utf8Base64 ''{1}''\r\n$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 ''{2}'') -AsPlainText -Force\r\n$statePath = ''C:\\AzureData''\r\n\r\nNew-Item -Path $statePath -ItemType Directory -Force | Out-Null\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{\r\n  Write-Host \"Domain controller role is already configured for $domainName.\"\r\n  exit 0\r\n}}\r\n\r\n$adDsFeature = Get-WindowsFeature -Name AD-Domain-Services\r\nif (-not $adDsFeature.Installed) {{\r\n  Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools\r\n}}\r\n\r\nImport-Module ADDSDeployment\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif ($computerSystem.DomainRole -lt 4) {{\r\n  Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion\r\n  Set-Content -Path (Join-Path $statePath ''adds-promotion-requested.txt'') -Value (Get-Date -Format o)\r\n  shutdown.exe /r /t 30 /c ''Completing AD DS forest promotion''\r\n}}\r\n', base64(parameters('activeDirectoryDomainName')), base64(parameters('activeDirectoryNetbiosName')), base64(parameters('domainSafeModeAdminPassword')))]",
+            "addsConfigurationVersion": "2026-06-09.1",
+            "configureAddsScript": "[format('$ErrorActionPreference = ''Stop''\r\n\r\nfunction ConvertFrom-Utf8Base64 {{\r\n  param([Parameter(Mandatory = $true)][string] $Value)\r\n  [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Value))\r\n}}\r\n\r\n$domainName = ConvertFrom-Utf8Base64 ''{0}''\r\n$netbiosName = ConvertFrom-Utf8Base64 ''{1}''\r\n$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 ''{2}'') -AsPlainText -Force\r\n$statePath = ''C:\\AzureData''\r\n\r\nNew-Item -Path $statePath -ItemType Directory -Force | Out-Null\r\n\r\n$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)\r\nforeach ($networkProfile in $networkProfiles) {{\r\n  if ($networkProfile.NetworkCategory -eq ''Public'') {{\r\n    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private\r\n  }}\r\n}}\r\n\r\nif (-not (Get-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -ErrorAction SilentlyContinue)) {{\r\n  New-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -DisplayName ''Hybrid DNS Lab - Allow ICMPv4 Inbound'' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null\r\n}}\r\nelse {{\r\n  Set-NetFirewallRule -Name ''HybridDns-Allow-ICMPv4-In'' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}}\r\n\r\nif (-not (Get-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -ErrorAction SilentlyContinue)) {{\r\n  New-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -DisplayName ''Hybrid DNS Lab - Allow ICMPv6 Inbound'' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null\r\n}}\r\nelse {{\r\n  Set-NetFirewallRule -Name ''HybridDns-Allow-ICMPv6-In'' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}}\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{\r\n  Write-Host \"Domain controller role is already configured for $domainName.\"\r\n  exit 0\r\n}}\r\n\r\n$adDsFeature = Get-WindowsFeature -Name AD-Domain-Services\r\nif (-not $adDsFeature.Installed) {{\r\n  Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools\r\n}}\r\n\r\nImport-Module ADDSDeployment\r\n\r\n$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem\r\nif ($computerSystem.DomainRole -lt 4) {{\r\n  Install-ADDSForest -DomainName $domainName -DomainNetbiosName $netbiosName -InstallDns -SafeModeAdministratorPassword $safeModePassword -Force -NoRebootOnCompletion\r\n  Set-Content -Path (Join-Path $statePath ''adds-promotion-requested.txt'') -Value (Get-Date -Format o)\r\n  shutdown.exe /r /t 30 /c ''Completing AD DS forest promotion''\r\n}}\r\n', base64(parameters('activeDirectoryDomainName')), base64(parameters('activeDirectoryNetbiosName')), base64(parameters('domainSafeModeAdminPassword')))]",
             "configureAddsCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}'')); Invoke-Expression $script\"\r\n', base64(variables('configureAddsScript')))]",
             "bastionNetworkSecurityGroupRules": [
               {
@@ -17202,7 +17202,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7613196189564965246"
+              "templateHash": "10828134602151363717"
             }
           },
           "parameters": {
@@ -17278,6 +17278,9 @@
             "dnsResolverInboundEndpointPrivateIpAddress": "172.19.5.4",
             "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
+            "windowsGuestConfigurationVersion": "2026-06-09.1",
+            "configureWindowsGuestScript": "$ErrorActionPreference = 'Stop'\r\n\r\n$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)\r\nforeach ($networkProfile in $networkProfiles) {\r\n  if ($networkProfile.NetworkCategory -eq 'Public') {\r\n    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private\r\n  }\r\n}\r\n\r\nif (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -ErrorAction SilentlyContinue)) {\r\n  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv4 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null\r\n}\r\nelse {\r\n  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}\r\n\r\nif (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -ErrorAction SilentlyContinue)) {\r\n  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv6 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null\r\n}\r\nelse {\r\n  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow\r\n}\r\n",
+            "configureWindowsGuestCommand": "[format('powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(''{0}'')); Invoke-Expression $script\"\r\n', base64(variables('configureWindowsGuestScript')))]",
             "bastionNetworkSecurityGroupRules": [
               {
                 "name": "AllowHttpsInbound",
@@ -17712,11 +17715,13 @@
             "azureVmDefinitions": [
               {
                 "name": "vm-azure01",
-                "subnetResourceId": "[variables('subnetResourceIds').vcpeCorp]"
+                "subnetResourceId": "[variables('subnetResourceIds').vcpeCorp]",
+                "privateIpAddress": "172.19.80.100"
               },
               {
                 "name": "vm-azure02",
-                "subnetResourceId": "[variables('subnetResourceIds').avd01]"
+                "subnetResourceId": "[variables('subnetResourceIds').avd01]",
+                "privateIpAddress": "172.19.40.4"
               }
             ]
           },
@@ -26414,7 +26419,8 @@
                           {
                             "name": "ipconfig1",
                             "subnetResourceId": "[variables('azureVmDefinitions')[copyIndex()].subnetResourceId]",
-                            "privateIPAllocationMethod": "Dynamic",
+                            "privateIPAddress": "[variables('azureVmDefinitions')[copyIndex()].privateIpAddress]",
+                            "privateIPAllocationMethod": "Static",
                             "pipConfiguration": null
                           }
                         ]
@@ -26427,6 +26433,16 @@
                   "extensionAntiMalwareConfig": {
                     "value": {
                       "enabled": true
+                    }
+                  },
+                  "extensionCustomScriptConfig": {
+                    "value": {
+                      "name": "configure-windows-network",
+                      "typeHandlerVersion": "1.10",
+                      "forceUpdateTag": "[variables('windowsGuestConfigurationVersion')]",
+                      "protectedSettings": {
+                        "commandToExecute": "[variables('configureWindowsGuestCommand')]"
+                      }
                     }
                   },
                   "enableTelemetry": {

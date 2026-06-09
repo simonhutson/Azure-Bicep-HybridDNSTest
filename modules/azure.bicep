@@ -30,6 +30,34 @@ var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
 var dnsResolverInboundEndpointPrivateIpAddress = '172.19.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
+var windowsGuestConfigurationVersion = '2026-06-09.1'
+var configureWindowsGuestScript = '''
+$ErrorActionPreference = 'Stop'
+
+$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)
+foreach ($networkProfile in $networkProfiles) {
+  if ($networkProfile.NetworkCategory -eq 'Public') {
+    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private
+  }
+}
+
+if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv4 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null
+}
+else {
+  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
+}
+
+if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv6 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null
+}
+else {
+  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
+}
+'''
+var configureWindowsGuestCommand = format('''
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{0}')); Invoke-Expression $script"
+''', base64(configureWindowsGuestScript))
 
 var bastionNetworkSecurityGroupRules = [
   {
@@ -482,10 +510,12 @@ var azureVmDefinitions = [
   {
     name: 'vm-azure01'
     subnetResourceId: subnetResourceIds.vcpeCorp
+    privateIpAddress: '172.19.80.100'
   }
   {
     name: 'vm-azure02'
     subnetResourceId: subnetResourceIds.avd01
+    privateIpAddress: '172.19.40.4'
   }
 ]
 
@@ -881,7 +911,8 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
           {
             name: 'ipconfig1'
             subnetResourceId: vm.subnetResourceId
-            privateIPAllocationMethod: 'Dynamic'
+            privateIPAddress: vm.privateIpAddress
+            privateIPAllocationMethod: 'Static'
             pipConfiguration: null
           }
         ]
@@ -890,6 +921,14 @@ module azureVirtualMachines 'br/public:avm/res/compute/virtual-machine:0.22.1' =
     bootDiagnostics: true
     extensionAntiMalwareConfig: {
       enabled: true
+    }
+    extensionCustomScriptConfig: {
+      name: 'configure-windows-network'
+      typeHandlerVersion: '1.10'
+      forceUpdateTag: windowsGuestConfigurationVersion
+      protectedSettings: {
+        commandToExecute: configureWindowsGuestCommand
+      }
     }
     enableTelemetry: false
     tags: tags
