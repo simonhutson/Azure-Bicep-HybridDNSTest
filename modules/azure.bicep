@@ -863,7 +863,7 @@ resource dnsResolverOutboundEndpoint 'Microsoft.Network/dnsResolvers/outboundEnd
   tags: tags
 }
 
-resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2022-07-01' = {
+resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2025-05-01' = {
   name: 'dnsfrs-azure-to-onprem'
   location: location
   properties: {
@@ -876,7 +876,7 @@ resource dnsForwardingRuleset 'Microsoft.Network/dnsForwardingRulesets@2022-07-0
   tags: tags
 }
 
-resource onPremDnsForwardingRule 'Microsoft.Network/dnsForwardingRulesets/forwardingRules@2022-07-01' = {
+resource onPremDnsForwardingRule 'Microsoft.Network/dnsForwardingRulesets/forwardingRules@2025-05-01' = {
   parent: dnsForwardingRuleset
   name: 'rule-onprem-ad'
   properties: {
@@ -891,7 +891,7 @@ resource onPremDnsForwardingRule 'Microsoft.Network/dnsForwardingRulesets/forwar
   }
 }
 
-resource dnsForwardingRulesetVirtualNetworkLink 'Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks@2022-07-01' = {
+resource dnsForwardingRulesetVirtualNetworkLink 'Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks@2025-05-01' = {
   parent: dnsForwardingRuleset
   name: 'link-vnet-azure'
   properties: {

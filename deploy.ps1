@@ -21,7 +21,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$deployScriptVersion = '2026-06-09.1'
+$deployScriptVersion = '2026-06-09.2'
+$dnsForwardingRulesetName = 'dnsfrs-azure-to-onprem'
+$dnsForwardingRulesetVirtualNetworkLinkName = 'link-vnet-azure'
+$dnsForwardingRulesetApiVersion = '2025-05-01'
 
 Write-Host "Running deploy.ps1 version $deployScriptVersion from '$PSCommandPath'."
 
@@ -104,6 +107,60 @@ function Invoke-AzDeploymentCommand {
     if ($exitCode -ne 0) {
         throw (New-AzCliFailureMessage -Description $Description -ExitCode $exitCode -Output $output)
     }
+}
+
+function Test-DnsForwardingRulesetVirtualNetworkLinkCircuitBreakerFailure {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    return ($Message -match 'Operation has exceeded maximum processing count') -and
+        ($Message -match 'virtualNetworkLinkResourceId=' -or $Message -match 'dnsForwardingRulesets/.*/virtualNetworkLinks')
+}
+
+function Reset-DnsForwardingRulesetVirtualNetworkLink {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SubscriptionId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RulesetName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$LinkName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ApiVersion
+    )
+
+    $linkResourceId = '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/dnsForwardingRulesets/{2}/virtualNetworkLinks/{3}' -f $SubscriptionId, $ResourceGroupName, $RulesetName, $LinkName
+
+    Write-Warning "Azure DNS Private Resolver reported a circuit-breaker failure for '$linkResourceId'. Resetting that ruleset VNet link before retrying deployment."
+
+    $showOutput = & az resource show `
+        --ids $linkResourceId `
+        --api-version $ApiVersion `
+        --only-show-errors `
+        --output none 2>&1
+    $showExitCode = $LASTEXITCODE
+
+    if ($showExitCode -ne 0) {
+        Write-Host "Ruleset VNet link '$linkResourceId' was not found or is no longer readable. Continuing with deployment retry."
+        Write-AzCliOutput -Output $showOutput
+        return
+    }
+
+    Invoke-AzDeploymentCommand `
+        -Description "Deleting stale DNS forwarding ruleset VNet link '$LinkName'..." `
+        -Arguments @('resource', 'delete', '--ids', $linkResourceId, '--api-version', $ApiVersion)
+
+    Invoke-AzDeploymentCommand `
+        -Description "Waiting for DNS forwarding ruleset VNet link '$LinkName' to be deleted..." `
+        -Arguments @('resource', 'wait', '--deleted', '--ids', $linkResourceId, '--api-version', $ApiVersion, '--timeout', '600')
 }
 
 function Get-AvailableSubscriptionMessage {
@@ -297,9 +354,32 @@ try {
         return
     }
 
-    Invoke-AzDeploymentCommand `
-        -Description "Starting subscription deployment '$DeploymentName' in $Location..." `
-        -Arguments (@('deployment', 'sub', 'create') + $commonArguments)
+    try {
+        Invoke-AzDeploymentCommand `
+            -Description "Starting subscription deployment '$DeploymentName' in $Location..." `
+            -Arguments (@('deployment', 'sub', 'create') + $commonArguments)
+    }
+    catch {
+        if (-not (Test-DnsForwardingRulesetVirtualNetworkLinkCircuitBreakerFailure -Message $_.Exception.Message)) {
+            throw
+        }
+
+        $activeSubscriptionId = (& az account show --query id --output tsv --only-show-errors 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($activeSubscriptionId)) {
+            throw "Deployment failed with a DNS forwarding ruleset VNet link circuit-breaker error, and the active subscription ID could not be read for automatic recovery. Original error: $($_.Exception.Message)"
+        }
+
+        Reset-DnsForwardingRulesetVirtualNetworkLink `
+            -SubscriptionId $activeSubscriptionId `
+            -ResourceGroupName $AzureResourceGroupName `
+            -RulesetName $dnsForwardingRulesetName `
+            -LinkName $dnsForwardingRulesetVirtualNetworkLinkName `
+            -ApiVersion $dnsForwardingRulesetApiVersion
+
+        Invoke-AzDeploymentCommand `
+            -Description "Retrying subscription deployment '$DeploymentName' after resetting the DNS forwarding ruleset VNet link..." `
+            -Arguments (@('deployment', 'sub', 'create') + $commonArguments)
+    }
 
     Wait-OnPremDomainControllerReady `
         -ResourceGroupName $OnPremResourceGroupName `

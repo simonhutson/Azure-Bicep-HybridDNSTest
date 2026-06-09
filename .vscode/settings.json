@@ -9,6 +9,8 @@
         "GetRange": true,
         "Resolve-Path": true,
         "Out-Null": true,
-        "Get-Command": true
+        "Get-Command": true,
+        "Push-Location": true,
+        "Pop-Location": true
     }
 }
