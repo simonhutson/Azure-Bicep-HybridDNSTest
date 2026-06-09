@@ -31,6 +31,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - [modules/onprem.bicep](modules/onprem.bicep): simulated on-prem network, Bastion, VPN gateway, and domain controller.
 - [modules/azure.bicep](modules/azure.bicep): simulated Azure network, DNS resolver, firewall, Bastion, private DNS zone, and VPN gateway.
 - [modules/vpn-connection.bicep](modules/vpn-connection.bicep): reusable VNet-to-VNet IPsec connection module.
+- [network-diagram.md](network-diagram.md): Mermaid network diagram of the VNets, subnets, firewall, VPN gateways, DNS, Bastion, Route Server, and VMs.
 
 ## CIDR Corrections
 
