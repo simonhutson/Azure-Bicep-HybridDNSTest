@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "10389713602193337659"
+      "templateHash": "10413904520609597051"
     }
   },
   "parameters": {
@@ -154,7 +154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "10852971555215475957"
+              "templateHash": "11225493568936160793"
             }
           },
           "parameters": {
@@ -220,6 +220,8 @@
             "domainControllerPrivateIpAddress": "10.0.5.4",
             "adSubnetName": "ad",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
+            "natGatewayName": "ngw-onprem",
+            "natGatewayPublicIpName": "pip-ngw-onprem",
             "addsConfigurationVersion": "2026-06-09.1",
             "windowsServerGeneration2ImageReference": {
               "publisher": "MicrosoftWindowsServer",
@@ -350,6 +352,41 @@
             }
           },
           "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('natGatewayPublicIpName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/natGateways",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('natGatewayName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "idleTimeoutInMinutes": 4,
+                "publicIpAddresses": [
+                  {
+                    "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('natGatewayPublicIpName'))]"
+                  }
+                ]
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('natGatewayPublicIpName'))]"
+              ]
+            },
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2023-11-01",
@@ -1747,7 +1784,8 @@
                       {
                         "name": "[variables('adSubnetName')]",
                         "addressPrefix": "10.0.5.0/24",
-                        "networkSecurityGroupResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'nsg-ad'), '2025-04-01').outputs.resourceId.value]"
+                        "networkSecurityGroupResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'nsg-ad'), '2025-04-01').outputs.resourceId.value]",
+                        "natGatewayResourceId": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
                       },
                       {
                         "name": "VirtualNetworkApplianceSubnet",
@@ -3557,7 +3595,8 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments', 'nsg-ad')]",
-                "[resourceId('Microsoft.Resources/deployments', variables('bastionNetworkSecurityGroupName'))]"
+                "[resourceId('Microsoft.Resources/deployments', variables('bastionNetworkSecurityGroupName'))]",
+                "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
               ]
             },
             {
@@ -17133,6 +17172,10 @@
               "type": "string",
               "value": "[resourceId('Microsoft.Network/virtualHubs', 'ars-onprem')]"
             },
+            "natGatewayResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
+            },
             "domainControllerPrivateIpAddress": {
               "type": "string",
               "value": "[variables('domainControllerPrivateIpAddress')]"
@@ -17191,7 +17234,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "7949780167896038519"
+              "templateHash": "13588216251309366594"
             }
           },
           "parameters": {
@@ -17259,13 +17302,15 @@
               {
                 "name": "customSubnetDefinitions",
                 "count": "[length(variables('customSubnets'))]",
-                "input": "[union(createObject('name', variables('customSubnets')[copyIndex('customSubnetDefinitions')].name, 'addressPrefix', variables('customSubnets')[copyIndex('customSubnetDefinitions')].addressPrefix), if(empty(variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName), createObject(), createObject('networkSecurityGroupResourceId', resourceId('Microsoft.Network/networkSecurityGroups', variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName))))]"
+                "input": "[union(createObject('name', variables('customSubnets')[copyIndex('customSubnetDefinitions')].name, 'addressPrefix', variables('customSubnets')[copyIndex('customSubnetDefinitions')].addressPrefix, 'natGatewayResourceId', resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))), if(empty(variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName), createObject(), createObject('networkSecurityGroupResourceId', resourceId('Microsoft.Network/networkSecurityGroups', variables('customSubnets')[copyIndex('customSubnetDefinitions')].nsgName))))]"
               }
             ],
             "virtualNetworkName": "vnet-azure",
             "bastionNetworkSecurityGroupName": "nsg-azure-bastion",
             "dnsResolverInboundEndpointPrivateIpAddress": "172.19.5.4",
             "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
+            "natGatewayName": "ngw-azure",
+            "natGatewayPublicIpName": "pip-ngw-azure",
             "onPremDnsForwardingDomainName": "[if(endsWith(parameters('activeDirectoryDomainName'), '.'), parameters('activeDirectoryDomainName'), format('{0}.', parameters('activeDirectoryDomainName')))]",
             "windowsGuestConfigurationVersion": "2026-06-09.1",
             "windowsServerGeneration2ImageReference": {
@@ -17724,6 +17769,41 @@
             {
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2023-11-01",
+              "name": "[variables('natGatewayPublicIpName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/natGateways",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('natGatewayName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "idleTimeoutInMinutes": 4,
+                "publicIpAddresses": [
+                  {
+                    "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('natGatewayPublicIpName'))]"
+                  }
+                ]
+              },
+              "tags": "[parameters('tags')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('natGatewayPublicIpName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
               "name": "pip-ars-azure",
               "location": "[parameters('location')]",
               "sku": {
@@ -17960,10 +18040,14 @@
                 },
                 "routeTable": {
                   "id": "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]"
+                },
+                "natGateway": {
+                  "id": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]"
+                "[resourceId('Microsoft.Network/routeTables', variables('azureFirewallRouteTableDefinitions')[copyIndex()].name)]",
+                "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
               ]
             },
             {
@@ -21218,6 +21302,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments', variables('bastionNetworkSecurityGroupName'))]",
+                "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]",
                 "networkSecurityGroups"
               ]
             },
@@ -38199,6 +38284,10 @@
               "type": "string",
               "value": "[resourceId('Microsoft.Network/virtualHubs', 'ars-azure')]"
             },
+            "natGatewayResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
+            },
             "privateDnsZoneResourceId": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', format('pdns-{0}', replace(parameters('privateDnsZoneName'), '.', '-'))), '2025-04-01').outputs.resourceId.value]"
@@ -39570,6 +39659,14 @@
     "azureRouteServerResourceId": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.routeServerResourceId.value]"
+    },
+    "onPremNatGatewayResourceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('onPremResourceGroupName')), 'Microsoft.Resources/deployments', 'onprem-environment'), '2025-04-01').outputs.natGatewayResourceId.value]"
+    },
+    "azureNatGatewayResourceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('azureResourceGroupName')), 'Microsoft.Resources/deployments', 'azure-environment'), '2025-04-01').outputs.natGatewayResourceId.value]"
     },
     "privateDnsZoneResourceId": {
       "type": "string",

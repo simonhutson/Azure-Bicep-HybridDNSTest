@@ -29,6 +29,8 @@ var virtualNetworkName = 'vnet-azure'
 var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
 var dnsResolverInboundEndpointPrivateIpAddress = '172.19.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
+var natGatewayName = 'ngw-azure'
+var natGatewayPublicIpName = 'pip-ngw-azure'
 var onPremDnsForwardingDomainName = endsWith(activeDirectoryDomainName, '.') ? activeDirectoryDomainName : '${activeDirectoryDomainName}.'
 var windowsGuestConfigurationVersion = '2026-06-09.1'
 var windowsServerGeneration2ImageReference = {
@@ -466,6 +468,7 @@ var customSubnets = [
 var customSubnetDefinitions = [for subnet in customSubnets: union({
   name: subnet.name
   addressPrefix: subnet.addressPrefix
+  natGatewayResourceId: natGateway.id
 }, empty(subnet.nsgName) ? {} : {
   networkSecurityGroupResourceId: resourceId('Microsoft.Network/networkSecurityGroups', subnet.nsgName)
 })]
@@ -544,6 +547,36 @@ module bastionNetworkSecurityGroup 'br/public:avm/res/network/network-security-g
     enableTelemetry: false
     tags: tags
   }
+}
+
+resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: natGatewayPublicIpName
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  tags: tags
+}
+
+resource natGateway 'Microsoft.Network/natGateways@2023-11-01' = {
+  name: natGatewayName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    idleTimeoutInMinutes: 4
+    publicIpAddresses: [
+      {
+        id: natGatewayPublicIp.id
+      }
+    ]
+  }
+  tags: tags
 }
 
 module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
@@ -770,6 +803,9 @@ resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNet
     routeTable: {
       id: azureFirewallRouteTables[routeTableIndex].id
     }
+    natGateway: {
+      id: natGateway.id
+    }
   }
 }]
 
@@ -973,6 +1009,7 @@ module virtualNetworkGateway 'br/public:avm/res/network/virtual-network-gateway:
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output routeServerResourceId string = routeServer.id
+output natGatewayResourceId string = natGateway.id
 output privateDnsZoneResourceId string = privateDnsZone.outputs.resourceId
 output azureFirewallPrivateIpAddress string = azureFirewall.properties.ipConfigurations[0].properties.privateIPAddress
 output firewallTransitAzureRoutes array = firewallTransitAzureRoutes

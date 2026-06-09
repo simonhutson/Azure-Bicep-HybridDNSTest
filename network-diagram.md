@@ -28,6 +28,8 @@ flowchart LR
         OnPremDc["vm-onprem01<br/>10.0.5.4<br/>AD DS + DNS"]
       end
     end
+
+    OnPremNat["ngw-onprem<br/>pip-ngw-onprem"]
   end
 
   subgraph AzureRG["rg-azure"]
@@ -81,10 +83,17 @@ flowchart LR
       PrivateDnsZone["Private DNS zone<br/>contoso.azure<br/>registration enabled"]
       DnsRuleset["DNS forwarding ruleset<br/>contoso.onprem -> 10.0.5.4"]
     end
+
+    AzureNat["ngw-azure<br/>pip-ngw-azure"]
   end
 
   Internet --- OnPremVgw
   Internet --- AzureVgw
+  OnPremAdSubnet -->|Outbound SNAT| OnPremNat
+  OnPremNat --> Internet
+  AzureWorkloadSubnets -->|Outbound SNAT| AzureNat
+  AzureAdditionalSubnets -->|Outbound SNAT| AzureNat
+  AzureNat --> Internet
   OnPremVgw <-->|VNet-to-VNet IPsec<br/>cn-vnet-onprem-to-vnet-azure<br/>cn-vnet-azure-to-vnet-onprem| AzureVgw
 
   GatewayRouteTable -->|Selected Azure prefixes| AzureFirewall
@@ -110,5 +119,6 @@ flowchart LR
 - `vm-azure02` lives in `avd01` at `172.19.40.4`.
 - `vm-onprem01` lives in `ad` at `10.0.5.4` and provides AD DS and DNS for `contoso.onprem`.
 - Both VPN gateways are active-active because Azure Route Server is deployed in both VNets.
+- `ngw-onprem` is associated to the on-prem `ad` subnet and `ngw-azure` is associated to the Azure custom workload subnets for outbound SNAT.
 - `rt-gateway-to-firewall-transit` is associated to the Azure `GatewaySubnet` and sends selected Azure destination prefixes from VPN ingress to Azure Firewall.
 - The Azure firewall-routed workload subnets have route tables for on-prem and cross-subnet traffic via `afw-azure-standard`.

@@ -12,6 +12,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` at `172.19.80.100` and `vm-azure02` at `172.19.40.4` on private-only NICs, configured with a Private Windows network profile and inbound ICMP allowed in Windows Firewall.
 - All Windows VMs use the Hyper-V Generation 2 Windows Server 2025 Azure Edition image and Trusted Launch with Secure Boot and vTPM enabled.
 - Azure Route Server in both `vnet-onprem` and `vnet-azure`.
+- NAT gateways `ngw-onprem` and `ngw-azure`, each with a Standard static public IP for private workload outbound SNAT.
 - Azure DNS Private Resolver with inbound endpoint `172.19.5.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
@@ -112,7 +113,7 @@ To temporarily remove the route table associations from all `vnet-azure` subnets
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, sets its Windows network profile to Private, allows inbound ICMP in Windows Firewall, then reboots once to complete AD DS configuration. `deploy.ps1` waits for the VM to report that the Active Directory forest is ready before it exits.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.
 - The private DNS zone auto-registers only VMs in `vnet-azure`.
-- Bastion, Azure Firewall, and VPN gateways use public IPs where Azure requires them; VM NICs do not.
+- Bastion, Azure Firewall, VPN gateways, Route Server, and NAT gateways use public IPs where Azure requires them; VM NICs do not.
 - Azure Firewall Standard supports threat intelligence alert and deny mode. The template does not enable forced tunneling, so it does not configure a firewall management NIC.
 - `RouteServerSubnet` subnets intentionally do not associate NSGs because Azure Route Server does not support NSGs on that subnet.
 - `AzureBastionSubnet` subnets use dedicated NSGs with the rules documented for Azure Bastion.

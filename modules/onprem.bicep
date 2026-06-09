@@ -33,6 +33,8 @@ var domainControllerName = 'vm-onprem01'
 var domainControllerPrivateIpAddress = '10.0.5.4'
 var adSubnetName = 'ad'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
+var natGatewayName = 'ngw-onprem'
+var natGatewayPublicIpName = 'pip-ngw-onprem'
 var addsConfigurationVersion = '2026-06-09.1'
 var windowsServerGeneration2ImageReference = {
   publisher: 'MicrosoftWindowsServer'
@@ -242,6 +244,36 @@ module bastionNetworkSecurityGroup 'br/public:avm/res/network/network-security-g
   }
 }
 
+resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: natGatewayPublicIpName
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  tags: tags
+}
+
+resource natGateway 'Microsoft.Network/natGateways@2023-11-01' = {
+  name: natGatewayName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    idleTimeoutInMinutes: 4
+    publicIpAddresses: [
+      {
+        id: natGatewayPublicIp.id
+      }
+    ]
+  }
+  tags: tags
+}
+
 module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
   name: virtualNetworkName
   params: {
@@ -259,6 +291,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
         name: adSubnetName
         addressPrefix: '10.0.5.0/24'
         networkSecurityGroupResourceId: adNetworkSecurityGroup.outputs.resourceId
+        natGatewayResourceId: natGateway.id
       }
       {
         name: 'VirtualNetworkApplianceSubnet'
@@ -428,5 +461,6 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
 output virtualNetworkResourceId string = virtualNetwork.outputs.resourceId
 output virtualNetworkGatewayResourceId string = virtualNetworkGateway.outputs.resourceId
 output routeServerResourceId string = routeServer.id
+output natGatewayResourceId string = natGateway.id
 output domainControllerPrivateIpAddress string = domainControllerPrivateIpAddress
 output adSubnetResourceId string = subnetResourceIds.ad
