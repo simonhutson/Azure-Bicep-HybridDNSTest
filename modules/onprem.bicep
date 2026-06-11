@@ -415,7 +415,7 @@ module domainController 'br/public:avm/res/compute/virtual-machine:0.22.1' = {
       createOption: 'FromImage'
       deleteOption: 'Delete'
       managedDisk: {
-        storageAccountType: 'StandardSSD_LRS'
+        storageAccountType: 'Premium_LRS'
       }
     }
     nicConfigurations: [

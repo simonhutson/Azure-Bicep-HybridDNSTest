@@ -27,13 +27,10 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 - [main.bicep](main.bicep): subscription-scope entry point.
 - [deploy.ps1](deploy.ps1): PowerShell deployment helper.
-- [disassociate-vnet-azure-route-tables.ps1](disassociate-vnet-azure-route-tables.ps1): standalone helper to disassociate route tables from `vnet-azure` subnets.
-- [associate-vnet-azure-route-tables.ps1](associate-vnet-azure-route-tables.ps1): standalone helper to associate the existing `vnet-azure` route tables to their expected subnets.
 - [main.bicepparam](main.bicepparam): optional sample parameters.
 - [modules/onprem.bicep](modules/onprem.bicep): simulated on-prem network, Bastion, VPN gateway, and domain controller.
 - [modules/azure.bicep](modules/azure.bicep): simulated Azure network, DNS resolver, firewall, Bastion, private DNS zone, and VPN gateway.
 - [modules/vpn-connection.bicep](modules/vpn-connection.bicep): reusable VNet-to-VNet IPsec connection module.
-- [network-diagram.md](network-diagram.md): Mermaid network diagram of the VNets, subnets, firewall, VPN gateways, DNS, Bastion, Route Server, and VMs.
 
 ## Subnet Addressing
 
@@ -73,7 +70,7 @@ The script prompts for the secure values, validates the subscription-scope deplo
 .\deploy.ps1 -Location swedencentral -SubscriptionId '<subscription-id>'
 ```
 
-The VM size defaults to `Standard_D2ads_v5` and can be overridden:
+The VM size defaults to `Standard_D4ads_v5` and can be overridden:
 
 ```powershell
 .\deploy.ps1 -VmSize 'Standard_D4ads_v5'
@@ -95,13 +92,6 @@ To preview changes:
 
 ```powershell
 .\deploy.ps1 -WhatIf
-```
-
-To temporarily remove the route table associations from all `vnet-azure` subnets and then reassociate the existing lab route tables:
-
-```powershell
-.\disassociate-vnet-azure-route-tables.ps1
-.\associate-vnet-azure-route-tables.ps1
 ```
 
 ## Notes

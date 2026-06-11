@@ -11,6 +11,7 @@
         "Out-Null": true,
         "Get-Command": true,
         "Push-Location": true,
-        "Pop-Location": true
+        "Pop-Location": true,
+        ".\\main.bicepparam": true
     }
 }

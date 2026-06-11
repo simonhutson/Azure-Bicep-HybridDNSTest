@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "9865839214080289658"
+      "templateHash": "13974440164462735491"
     }
   },
   "parameters": {
@@ -154,7 +154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "3349787881930206232"
+              "templateHash": "5698368742438873980"
             }
           },
           "parameters": {
@@ -218,7 +218,7 @@
             "virtualNetworkName": "vnet-onprem",
             "domainControllerName": "vm-onprem01",
             "domainControllerPrivateIpAddress": "10.0.11.4",
-            "adSubnetName": "ActiveDirectorySubnet",
+            "activeDirectorySubnetName": "ActiveDirectorySubnet",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
             "natGatewayName": "ngw-onprem",
             "natGatewayPublicIpName": "pip-ngw-onprem",
@@ -347,7 +347,7 @@
               }
             ],
             "subnetResourceIds": {
-              "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]",
+              "ad": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('activeDirectorySubnetName'))]",
               "routeServer": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'RouteServerSubnet')]"
             }
           },
@@ -1782,7 +1782,7 @@
                   "subnets": {
                     "value": [
                       {
-                        "name": "[variables('adSubnetName')]",
+                        "name": "[variables('activeDirectorySubnetName')]",
                         "addressPrefix": "10.0.11.0/24",
                         "networkSecurityGroupResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'nsg-ad'), '2025-04-01').outputs.resourceId.value]",
                         "natGatewayResourceId": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
@@ -7750,7 +7750,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "StandardSSD_LRS"
+                        "storageAccountType": "Premium_LRS"
                       }
                     }
                   },
@@ -17234,7 +17234,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "9811741246626252267"
+              "templateHash": "3870513822939361050"
             }
           },
           "parameters": {
@@ -26252,7 +26252,7 @@
                       "createOption": "FromImage",
                       "deleteOption": "Delete",
                       "managedDisk": {
-                        "storageAccountType": "StandardSSD_LRS"
+                        "storageAccountType": "Premium_LRS"
                       }
                     }
                   },
