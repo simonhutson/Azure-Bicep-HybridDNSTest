@@ -84,14 +84,8 @@ Invoke-AzCliCommand `
     -Arguments @('network', 'vnet', 'show', '--resource-group', $ResourceGroupName, '--name', $VirtualNetworkName, '--only-show-errors', '--output', 'none')
 
 $routeTableAssociations = @(
-    New-RouteTableAssociation -SubnetName 'zscaler-zpa' -RouteTableName 'rt-zscaler-zpa'
-    New-RouteTableAssociation -SubnetName 'avd01' -RouteTableName 'rt-avd01'
-    New-RouteTableAssociation -SubnetName 'live' -RouteTableName 'rt-live'
-    New-RouteTableAssociation -SubnetName 'dhcp' -RouteTableName 'rt-dhcp'
-    New-RouteTableAssociation -SubnetName 'unisim' -RouteTableName 'rt-unisim'
-    New-RouteTableAssociation -SubnetName 'utilities' -RouteTableName 'rt-utilities'
-    New-RouteTableAssociation -SubnetName 'vcpe-corp' -RouteTableName 'rt-vcpe-corp'
-    New-RouteTableAssociation -SubnetName 'vcpe-iot' -RouteTableName 'rt-vcpe-iot'
+    New-RouteTableAssociation -SubnetName 'Workload2Subnet' -RouteTableName 'rt-workload2'
+    New-RouteTableAssociation -SubnetName 'Workload1Subnet' -RouteTableName 'rt-workload1'
     New-RouteTableAssociation -SubnetName 'GatewaySubnet' -RouteTableName 'rt-gateway-to-firewall-transit'
 )
 

@@ -6,21 +6,21 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 
 - Resource groups `rg-onprem` and `rg-azure`.
 - Simulated on-prem VNet `vnet-onprem` with address space `10.0.0.0/8`.
-- Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ad` at `10.0.5.4`.
+- Windows Server 2025 Datacenter: Azure Edition domain controller VM `vm-onprem01` on subnet `ActiveDirectorySubnet` at `10.0.11.4`.
 - Active Directory Domain Services forest and integrated DNS for `contoso.onprem` with configurable NetBIOS name `CONTOSO` by default.
-- Simulated Azure VNet `vnet-azure` with address space `172.19.0.0/16`.
-- Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` at `172.19.80.100` and `vm-azure02` at `172.19.40.4` on private-only NICs, configured with a Private Windows network profile and inbound ICMP allowed in Windows Firewall.
+- Simulated Azure VNet `vnet-azure` with address space `172.16.0.0/16`.
+- Windows Server 2025 Datacenter: Azure Edition VMs `vm-azure01` at `172.16.11.100` and `vm-azure02` at `172.16.12.4` on private-only NICs, configured with a Private Windows network profile and inbound ICMP allowed in Windows Firewall.
 - All Windows VMs use the Hyper-V Generation 2 Windows Server 2025 Azure Edition image and Trusted Launch with Secure Boot and vTPM enabled.
 - Azure Route Server in both `vnet-onprem` and `vnet-azure`.
 - NAT gateways `ngw-onprem` and `ngw-azure`, each with a Standard static public IP for private workload outbound SNAT.
-- Azure DNS Private Resolver with inbound endpoint `172.19.5.4` and outbound endpoint subnet.
+- Azure DNS Private Resolver with inbound endpoint `172.16.5.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
 - Dedicated NSGs for each `AzureBastionSubnet` with the Microsoft-documented Azure Bastion inbound and outbound rules.
-- Azure route tables that force requested Azure subnet-to-subnet traffic and on-prem ingress through Azure Firewall.
+- Azure route tables that force Azure-to-on-prem and on-prem-to-Azure traffic through Azure Firewall while workload subnet-to-subnet traffic uses VNet local routing.
 - Active-active VNet-to-VNet IPsec VPN gateways and bidirectional connections.
-- NSGs for the requested custom subnets with only default security rules, including `nsg-dhcp` on `dhcp`.
+- NSGs for `Workload1Subnet` and `Workload2Subnet` with only default security rules.
 - No VM NIC creates or attaches a public IP address.
 
 ## Files
@@ -35,13 +35,12 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - [modules/vpn-connection.bicep](modules/vpn-connection.bicep): reusable VNet-to-VNet IPsec connection module.
 - [network-diagram.md](network-diagram.md): Mermaid network diagram of the VNets, subnets, firewall, VPN gateways, DNS, Bastion, Route Server, and VMs.
 
-## CIDR Corrections
+## Subnet Addressing
 
-The request included CIDR values that Azure will not accept as written. The template uses deployable defaults:
+The template uses these Azure workload subnet ranges:
 
-- `avd01`: `172.19/40.0/24` was corrected to `172.19.40.0/24`.
-- `vcpe-corp`: `172.19.80.96.28` was corrected to `172.19.80.96/28`.
-- `dhcp`: corrected from invalid and overlapping `172.19.15.0/18` to `172.19.15.0/28`.
+- `Workload1Subnet`: `172.16.11.0/24`.
+- `Workload2Subnet`: `172.16.12.0/24`.
 
 The platform subnets use non-overlapping ranges reserved for Azure services and future route-server testing:
 
@@ -50,15 +49,14 @@ The platform subnets use non-overlapping ranges reserved for Azure services and 
 - On-prem `AzureFirewallSubnet`: `10.0.2.0/24`
 - On-prem `RouteServerSubnet`: `10.0.3.0/24`
 - On-prem `VirtualNetworkApplianceSubnet`: `10.0.4.0/24`
-- On-prem `ad`: `10.0.5.0/24`
-- Azure `GatewaySubnet`: `172.19.0.0/24`
-- Azure `AzureBastionSubnet`: `172.19.1.0/24`
-- Azure `AzureFirewallSubnet`: `172.19.2.0/24`
-- Azure `RouteServerSubnet`: `172.19.3.0/24`
-- Azure `VirtualNetworkApplianceSubnet`: `172.19.4.0/24`
-- Azure DNS resolver subnets: `172.19.5.0/25` and `172.19.5.128/25`
-
-The `172.19.85.0/24` area is represented by the requested `fw04-*` workload subnets, which would overlap an Azure Firewall platform subnet if both used that same `/24`.
+- On-prem `ActiveDirectorySubnet`: `10.0.11.0/24`
+- Azure `GatewaySubnet`: `172.16.0.0/24`
+- Azure `AzureBastionSubnet`: `172.16.1.0/24`
+- Azure `AzureFirewallSubnet`: `172.16.2.0/24`
+- Azure `RouteServerSubnet`: `172.16.3.0/24`
+- Azure `VirtualNetworkApplianceSubnet`: `172.16.4.0/24`
+- Azure `DnsPrivateResolverInboundSubnet`: `172.16.5.0/24`
+- Azure `DnsPrivateResolverOutboundSubnet`: `172.16.6.0/24`
 
 ## Deployment
 
@@ -109,7 +107,7 @@ To temporarily remove the route table associations from all `vnet-azure` subnets
 ## Notes
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Private DNS, VPN gateways, gateway connections, and the Windows VM. Azure Firewall and DNS Resolver resources are deployed directly where the template needs tighter control.
-- The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.5.4`.
+- The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.11.4`.
 - If Azure DNS Private Resolver returns a forwarding ruleset VNet link circuit-breaker error, `deploy.ps1` deletes the stale `link-vnet-azure` link and retries the deployment once.
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, sets its Windows network profile to Private, allows inbound ICMP in Windows Firewall, then reboots once to complete AD DS configuration. `deploy.ps1` waits for the VM to report that the Active Directory forest is ready before it exits.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.

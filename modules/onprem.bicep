@@ -30,8 +30,8 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-onprem'
 var domainControllerName = 'vm-onprem01'
-var domainControllerPrivateIpAddress = '10.0.5.4'
-var adSubnetName = 'ad'
+var domainControllerPrivateIpAddress = '10.0.11.4'
+var activeDirectorySubnetName = 'ActiveDirectorySubnet'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var natGatewayName = 'ngw-onprem'
 var natGatewayPublicIpName = 'pip-ngw-onprem'
@@ -219,11 +219,11 @@ var bastionNetworkSecurityGroupRules = [
 ]
 
 var subnetResourceIds = {
-  ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, adSubnetName)
+  ad: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, activeDirectorySubnetName)
   routeServer: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'RouteServerSubnet')
 }
 
-module adNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
+module activeDirectoryNetworkSecurityGroup 'br/public:avm/res/network/network-security-group:0.5.3' = {
   name: 'nsg-ad'
   params: {
     name: 'nsg-ad'
@@ -288,9 +288,9 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
     enableTelemetry: false
     subnets: [
       {
-        name: adSubnetName
-        addressPrefix: '10.0.5.0/24'
-        networkSecurityGroupResourceId: adNetworkSecurityGroup.outputs.resourceId
+        name: activeDirectorySubnetName
+        addressPrefix: '10.0.11.0/24'
+        networkSecurityGroupResourceId: activeDirectoryNetworkSecurityGroup.outputs.resourceId
         natGatewayResourceId: natGateway.id
       }
       {

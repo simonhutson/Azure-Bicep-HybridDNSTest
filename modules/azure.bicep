@@ -27,7 +27,7 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
 var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
-var dnsResolverInboundEndpointPrivateIpAddress = '172.19.5.4'
+var dnsResolverInboundEndpointPrivateIpAddress = '172.16.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var natGatewayName = 'ngw-azure'
 var natGatewayPublicIpName = 'pip-ngw-azure'
@@ -185,36 +185,12 @@ var bastionNetworkSecurityGroupRules = [
 
 var firewallTransitAzureRoutes = [
   {
-    name: 'to-zscaler-zpa'
-    addressPrefix: '172.19.60.0/28'
+    name: 'to-workload2'
+    addressPrefix: '172.16.12.0/24'
   }
   {
-    name: 'to-avd01'
-    addressPrefix: '172.19.40.0/24'
-  }
-  {
-    name: 'to-live'
-    addressPrefix: '172.19.20.0/23'
-  }
-  {
-    name: 'to-dhcp'
-    addressPrefix: '172.19.15.0/28'
-  }
-  {
-    name: 'to-unisim'
-    addressPrefix: '172.19.14.0/28'
-  }
-  {
-    name: 'to-utilities'
-    addressPrefix: '172.19.10.0/23'
-  }
-  {
-    name: 'to-vcpe-corp'
-    addressPrefix: '172.19.80.96/28'
-  }
-  {
-    name: 'to-vcpe-iot'
-    addressPrefix: '172.19.80.112/28'
+    name: 'to-workload1'
+    addressPrefix: '172.16.11.0/24'
   }
 ]
 
@@ -222,246 +198,46 @@ var firewallTransitAzureAddressPrefixes = [for route in firewallTransitAzureRout
 
 var azureFirewallRouteTableDefinitions = [
   {
-    name: 'rt-zscaler-zpa'
-    subnetName: 'zscaler-zpa'
-    subnetAddressPrefix: '172.19.60.0/28'
-    networkSecurityGroupName: 'nsg-zscaler-zpa'
+    name: 'rt-workload2'
+    subnetName: 'Workload2Subnet'
+    subnetAddressPrefix: '172.16.12.0/24'
+    networkSecurityGroupName: 'nsg-workload2'
     routes: [
       {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
       }
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
     ]
   }
   {
-    name: 'rt-avd01'
-    subnetName: 'avd01'
-    subnetAddressPrefix: '172.19.40.0/24'
-    networkSecurityGroupName: 'nsg-avd01'
+    name: 'rt-workload1'
+    subnetName: 'Workload1Subnet'
+    subnetAddressPrefix: '172.16.11.0/24'
+    networkSecurityGroupName: 'nsg-workload1'
     routes: [
       {
         name: 'to-onprem'
         addressPrefix: onPremVirtualNetworkAddressPrefix
       }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-live'
-    subnetName: 'live'
-    subnetAddressPrefix: '172.19.20.0/23'
-    networkSecurityGroupName: 'nsg-live'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-dhcp'
-    subnetName: 'dhcp'
-    subnetAddressPrefix: '172.19.15.0/28'
-    networkSecurityGroupName: 'nsg-dhcp'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-unisim'
-    subnetName: 'unisim'
-    subnetAddressPrefix: '172.19.14.0/28'
-    networkSecurityGroupName: 'nsg-unisim'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-utilities'
-    subnetName: 'utilities'
-    subnetAddressPrefix: '172.19.10.0/23'
-    networkSecurityGroupName: 'nsg-utilities'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[6]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-vcpe-corp'
-    subnetName: 'vcpe-corp'
-    subnetAddressPrefix: '172.19.80.96/28'
-    networkSecurityGroupName: 'nsg-vcpe-corp'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[7]
-    ]
-  }
-  {
-    name: 'rt-vcpe-iot'
-    subnetName: 'vcpe-iot'
-    subnetAddressPrefix: '172.19.80.112/28'
-    networkSecurityGroupName: 'nsg-vcpe-iot'
-    routes: [
-      {
-        name: 'to-onprem'
-        addressPrefix: onPremVirtualNetworkAddressPrefix
-      }
-      firewallTransitAzureRoutes[0]
-      firewallTransitAzureRoutes[1]
-      firewallTransitAzureRoutes[2]
-      firewallTransitAzureRoutes[3]
-      firewallTransitAzureRoutes[4]
-      firewallTransitAzureRoutes[5]
-      firewallTransitAzureRoutes[6]
     ]
   }
 ]
 
 var nsgNames = [
-  'nsg-zscaler-zpa'
-  'nsg-avd01'
-  'nsg-live'
-  'nsg-dhcp'
-  'nsg-unisim'
-  'nsg-utilities'
-  'nsg-vcpe-corp'
-  'nsg-vcpe-iot'
-  'nsg-vmb-management'
-  'nsg-vcpe-sdwan'
-  'nsg-fw04-corp'
-  'nsg-fw04-iot'
-  'nsg-fw04-untrust'
-  'nsg-fw04-management'
+  'nsg-workload2'
+  'nsg-workload1'
 ]
 
 var customSubnets = [
   {
-    name: 'zscaler-zpa'
-    addressPrefix: '172.19.60.0/28'
-    nsgName: 'nsg-zscaler-zpa'
+    name: 'Workload2Subnet'
+    addressPrefix: '172.16.12.0/24'
+    nsgName: 'nsg-workload2'
   }
   {
-    name: 'avd01'
-    addressPrefix: '172.19.40.0/24'
-    nsgName: 'nsg-avd01'
-  }
-  {
-    name: 'live'
-    addressPrefix: '172.19.20.0/23'
-    nsgName: 'nsg-live'
-  }
-  {
-    name: 'dhcp'
-    addressPrefix: '172.19.15.0/28'
-    nsgName: 'nsg-dhcp'
-  }
-  {
-    name: 'unisim'
-    addressPrefix: '172.19.14.0/28'
-    nsgName: 'nsg-unisim'
-  }
-  {
-    name: 'utilities'
-    addressPrefix: '172.19.10.0/23'
-    nsgName: 'nsg-utilities'
-  }
-  {
-    name: 'vcpe-corp'
-    addressPrefix: '172.19.80.96/28'
-    nsgName: 'nsg-vcpe-corp'
-  }
-  {
-    name: 'vcpe-iot'
-    addressPrefix: '172.19.80.112/28'
-    nsgName: 'nsg-vcpe-iot'
-  }
-  {
-    name: 'vmb-management'
-    addressPrefix: '172.19.80.80/28'
-    nsgName: 'nsg-vmb-management'
-  }
-  {
-    name: 'vcpe-sdwan'
-    addressPrefix: '172.19.80.64/28'
-    nsgName: 'nsg-vcpe-sdwan'
-  }
-  {
-    name: 'fw04-corp'
-    addressPrefix: '172.19.85.96/28'
-    nsgName: 'nsg-fw04-corp'
-  }
-  {
-    name: 'fw04-iot'
-    addressPrefix: '172.19.85.112/28'
-    nsgName: 'nsg-fw04-iot'
-  }
-  {
-    name: 'fw04-untrust'
-    addressPrefix: '172.19.85.32/27'
-    nsgName: 'nsg-fw04-untrust'
-  }
-  {
-    name: 'fw04-management'
-    addressPrefix: '172.19.85.80/28'
-    nsgName: 'nsg-fw04-management'
+    name: 'Workload1Subnet'
+    addressPrefix: '172.16.11.0/24'
+    nsgName: 'nsg-workload1'
   }
 ]
 
@@ -475,56 +251,56 @@ var customSubnetDefinitions = [for subnet in customSubnets: union({
 
 var platformSubnetDefinitions = [
   {
-    name: 'dns-resolver-inbound'
-    addressPrefix: '172.19.5.0/25'
+    name: 'DnsPrivateResolverInboundSubnet'
+    addressPrefix: '172.16.5.0/24'
     delegation: 'Microsoft.Network/dnsResolvers'
   }
   {
-    name: 'dns-resolver-outbound'
-    addressPrefix: '172.19.5.128/25'
+    name: 'DnsPrivateResolverOutboundSubnet'
+    addressPrefix: '172.16.6.0/24'
     delegation: 'Microsoft.Network/dnsResolvers'
   }
   {
     name: 'VirtualNetworkApplianceSubnet'
-    addressPrefix: '172.19.4.0/24'
+    addressPrefix: '172.16.4.0/24'
   }
   {
     name: 'RouteServerSubnet'
-    addressPrefix: '172.19.3.0/24'
+    addressPrefix: '172.16.3.0/24'
   }
   {
     name: 'AzureFirewallSubnet'
-    addressPrefix: '172.19.2.0/24'
+    addressPrefix: '172.16.2.0/24'
   }
   {
     name: 'AzureBastionSubnet'
-    addressPrefix: '172.19.1.0/24'
+    addressPrefix: '172.16.1.0/24'
     networkSecurityGroupResourceId: resourceId('Microsoft.Network/networkSecurityGroups', bastionNetworkSecurityGroupName)
   }
   {
     name: 'GatewaySubnet'
-    addressPrefix: '172.19.0.0/24'
+    addressPrefix: '172.16.0.0/24'
   }
 ]
 
 var subnetResourceIds = {
-  dnsResolverInbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-inbound')
-  dnsResolverOutbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'dns-resolver-outbound')
+  dnsResolverInbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'DnsPrivateResolverInboundSubnet')
+  dnsResolverOutbound: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'DnsPrivateResolverOutboundSubnet')
   routeServer: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'RouteServerSubnet')
-  avd01: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'avd01')
-  vcpeCorp: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'vcpe-corp')
+  workload2: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'Workload2Subnet')
+  workload1: resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, 'Workload1Subnet')
 }
 
 var azureVmDefinitions = [
   {
     name: 'vm-azure01'
-    subnetResourceId: subnetResourceIds.vcpeCorp
-    privateIpAddress: '172.19.80.100'
+    subnetResourceId: subnetResourceIds.workload1
+    privateIpAddress: '172.16.11.100'
   }
   {
     name: 'vm-azure02'
-    subnetResourceId: subnetResourceIds.avd01
-    privateIpAddress: '172.19.40.4'
+    subnetResourceId: subnetResourceIds.workload2
+    privateIpAddress: '172.16.12.4'
   }
 ]
 
@@ -585,7 +361,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.9.0' = {
     name: virtualNetworkName
     location: location
     addressPrefixes: [
-      '172.19.0.0/16'
+      '172.16.0.0/16'
     ]
     subnets: concat(platformSubnetDefinitions, customSubnetDefinitions)
     enableTelemetry: false
@@ -683,18 +459,6 @@ resource azureFirewallPolicyRuleCollectionGroup 'Microsoft.Network/firewallPolic
           type: 'Allow'
         }
         rules: [
-          {
-            name: 'AllowRequestedAzureSubnets'
-            ruleType: 'NetworkRule'
-            ipProtocols: [
-              'Any'
-            ]
-            sourceAddresses: firewallTransitAzureAddressPrefixes
-            destinationAddresses: firewallTransitAzureAddressPrefixes
-            destinationPorts: [
-              '*'
-            ]
-          }
           {
             name: 'AllowAzureSubnetsToOnPrem'
             ruleType: 'NetworkRule'
@@ -812,7 +576,7 @@ resource azureFirewallRouteTableSubnetAssociations 'Microsoft.Network/virtualNet
 resource gatewaySubnetFirewallTransitRouteTableAssociation 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = {
   name: '${virtualNetworkName}/GatewaySubnet'
   properties: {
-    addressPrefix: '172.19.0.0/24'
+    addressPrefix: '172.16.0.0/24'
     routeTable: {
       id: gatewaySubnetFirewallTransitRouteTable.id
     }

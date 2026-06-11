@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "10413904520609597051"
+      "templateHash": "9865839214080289658"
     }
   },
   "parameters": {
@@ -154,7 +154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "11225493568936160793"
+              "templateHash": "3349787881930206232"
             }
           },
           "parameters": {
@@ -217,8 +217,8 @@
           "variables": {
             "virtualNetworkName": "vnet-onprem",
             "domainControllerName": "vm-onprem01",
-            "domainControllerPrivateIpAddress": "10.0.5.4",
-            "adSubnetName": "ad",
+            "domainControllerPrivateIpAddress": "10.0.11.4",
+            "adSubnetName": "ActiveDirectorySubnet",
             "bastionNetworkSecurityGroupName": "nsg-onprem-bastion",
             "natGatewayName": "ngw-onprem",
             "natGatewayPublicIpName": "pip-ngw-onprem",
@@ -1783,7 +1783,7 @@
                     "value": [
                       {
                         "name": "[variables('adSubnetName')]",
-                        "addressPrefix": "10.0.5.0/24",
+                        "addressPrefix": "10.0.11.0/24",
                         "networkSecurityGroupResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'nsg-ad'), '2025-04-01').outputs.resourceId.value]",
                         "natGatewayResourceId": "[resourceId('Microsoft.Network/natGateways', variables('natGatewayName'))]"
                       },
@@ -17234,7 +17234,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "13588216251309366594"
+              "templateHash": "9811741246626252267"
             }
           },
           "parameters": {
@@ -17307,7 +17307,7 @@
             ],
             "virtualNetworkName": "vnet-azure",
             "bastionNetworkSecurityGroupName": "nsg-azure-bastion",
-            "dnsResolverInboundEndpointPrivateIpAddress": "172.19.5.4",
+            "dnsResolverInboundEndpointPrivateIpAddress": "172.16.5.4",
             "onPremVirtualNetworkAddressPrefix": "10.0.0.0/8",
             "natGatewayName": "ngw-azure",
             "natGatewayPublicIpName": "pip-ngw-azure",
@@ -17438,330 +17438,106 @@
             ],
             "firewallTransitAzureRoutes": [
               {
-                "name": "to-zscaler-zpa",
-                "addressPrefix": "172.19.60.0/28"
+                "name": "to-workload2",
+                "addressPrefix": "172.16.12.0/24"
               },
               {
-                "name": "to-avd01",
-                "addressPrefix": "172.19.40.0/24"
-              },
-              {
-                "name": "to-live",
-                "addressPrefix": "172.19.20.0/23"
-              },
-              {
-                "name": "to-dhcp",
-                "addressPrefix": "172.19.15.0/28"
-              },
-              {
-                "name": "to-unisim",
-                "addressPrefix": "172.19.14.0/28"
-              },
-              {
-                "name": "to-utilities",
-                "addressPrefix": "172.19.10.0/23"
-              },
-              {
-                "name": "to-vcpe-corp",
-                "addressPrefix": "172.19.80.96/28"
-              },
-              {
-                "name": "to-vcpe-iot",
-                "addressPrefix": "172.19.80.112/28"
+                "name": "to-workload1",
+                "addressPrefix": "172.16.11.0/24"
               }
             ],
             "azureFirewallRouteTableDefinitions": [
               {
-                "name": "rt-zscaler-zpa",
-                "subnetName": "zscaler-zpa",
-                "subnetAddressPrefix": "172.19.60.0/28",
-                "networkSecurityGroupName": "nsg-zscaler-zpa",
+                "name": "rt-workload2",
+                "subnetName": "Workload2Subnet",
+                "subnetAddressPrefix": "172.16.12.0/24",
+                "networkSecurityGroupName": "nsg-workload2",
                 "routes": [
                   {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
+                  }
                 ]
               },
               {
-                "name": "rt-avd01",
-                "subnetName": "avd01",
-                "subnetAddressPrefix": "172.19.40.0/24",
-                "networkSecurityGroupName": "nsg-avd01",
+                "name": "rt-workload1",
+                "subnetName": "Workload1Subnet",
+                "subnetAddressPrefix": "172.16.11.0/24",
+                "networkSecurityGroupName": "nsg-workload1",
                 "routes": [
                   {
                     "name": "to-onprem",
                     "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-live",
-                "subnetName": "live",
-                "subnetAddressPrefix": "172.19.20.0/23",
-                "networkSecurityGroupName": "nsg-live",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-dhcp",
-                "subnetName": "dhcp",
-                "subnetAddressPrefix": "172.19.15.0/28",
-                "networkSecurityGroupName": "nsg-dhcp",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-unisim",
-                "subnetName": "unisim",
-                "subnetAddressPrefix": "172.19.14.0/28",
-                "networkSecurityGroupName": "nsg-unisim",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-utilities",
-                "subnetName": "utilities",
-                "subnetAddressPrefix": "172.19.10.0/23",
-                "networkSecurityGroupName": "nsg-utilities",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-vcpe-corp",
-                "subnetName": "vcpe-corp",
-                "subnetAddressPrefix": "172.19.80.96/28",
-                "networkSecurityGroupName": "nsg-vcpe-corp",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[7]]"
-                ]
-              },
-              {
-                "name": "rt-vcpe-iot",
-                "subnetName": "vcpe-iot",
-                "subnetAddressPrefix": "172.19.80.112/28",
-                "networkSecurityGroupName": "nsg-vcpe-iot",
-                "routes": [
-                  {
-                    "name": "to-onprem",
-                    "addressPrefix": "[variables('onPremVirtualNetworkAddressPrefix')]"
-                  },
-                  "[variables('firewallTransitAzureRoutes')[0]]",
-                  "[variables('firewallTransitAzureRoutes')[1]]",
-                  "[variables('firewallTransitAzureRoutes')[2]]",
-                  "[variables('firewallTransitAzureRoutes')[3]]",
-                  "[variables('firewallTransitAzureRoutes')[4]]",
-                  "[variables('firewallTransitAzureRoutes')[5]]",
-                  "[variables('firewallTransitAzureRoutes')[6]]"
+                  }
                 ]
               }
             ],
             "nsgNames": [
-              "nsg-zscaler-zpa",
-              "nsg-avd01",
-              "nsg-live",
-              "nsg-dhcp",
-              "nsg-unisim",
-              "nsg-utilities",
-              "nsg-vcpe-corp",
-              "nsg-vcpe-iot",
-              "nsg-vmb-management",
-              "nsg-vcpe-sdwan",
-              "nsg-fw04-corp",
-              "nsg-fw04-iot",
-              "nsg-fw04-untrust",
-              "nsg-fw04-management"
+              "nsg-workload2",
+              "nsg-workload1"
             ],
             "customSubnets": [
               {
-                "name": "zscaler-zpa",
-                "addressPrefix": "172.19.60.0/28",
-                "nsgName": "nsg-zscaler-zpa"
+                "name": "Workload2Subnet",
+                "addressPrefix": "172.16.12.0/24",
+                "nsgName": "nsg-workload2"
               },
               {
-                "name": "avd01",
-                "addressPrefix": "172.19.40.0/24",
-                "nsgName": "nsg-avd01"
-              },
-              {
-                "name": "live",
-                "addressPrefix": "172.19.20.0/23",
-                "nsgName": "nsg-live"
-              },
-              {
-                "name": "dhcp",
-                "addressPrefix": "172.19.15.0/28",
-                "nsgName": "nsg-dhcp"
-              },
-              {
-                "name": "unisim",
-                "addressPrefix": "172.19.14.0/28",
-                "nsgName": "nsg-unisim"
-              },
-              {
-                "name": "utilities",
-                "addressPrefix": "172.19.10.0/23",
-                "nsgName": "nsg-utilities"
-              },
-              {
-                "name": "vcpe-corp",
-                "addressPrefix": "172.19.80.96/28",
-                "nsgName": "nsg-vcpe-corp"
-              },
-              {
-                "name": "vcpe-iot",
-                "addressPrefix": "172.19.80.112/28",
-                "nsgName": "nsg-vcpe-iot"
-              },
-              {
-                "name": "vmb-management",
-                "addressPrefix": "172.19.80.80/28",
-                "nsgName": "nsg-vmb-management"
-              },
-              {
-                "name": "vcpe-sdwan",
-                "addressPrefix": "172.19.80.64/28",
-                "nsgName": "nsg-vcpe-sdwan"
-              },
-              {
-                "name": "fw04-corp",
-                "addressPrefix": "172.19.85.96/28",
-                "nsgName": "nsg-fw04-corp"
-              },
-              {
-                "name": "fw04-iot",
-                "addressPrefix": "172.19.85.112/28",
-                "nsgName": "nsg-fw04-iot"
-              },
-              {
-                "name": "fw04-untrust",
-                "addressPrefix": "172.19.85.32/27",
-                "nsgName": "nsg-fw04-untrust"
-              },
-              {
-                "name": "fw04-management",
-                "addressPrefix": "172.19.85.80/28",
-                "nsgName": "nsg-fw04-management"
+                "name": "Workload1Subnet",
+                "addressPrefix": "172.16.11.0/24",
+                "nsgName": "nsg-workload1"
               }
             ],
             "platformSubnetDefinitions": [
               {
-                "name": "dns-resolver-inbound",
-                "addressPrefix": "172.19.5.0/25",
+                "name": "DnsPrivateResolverInboundSubnet",
+                "addressPrefix": "172.16.5.0/24",
                 "delegation": "Microsoft.Network/dnsResolvers"
               },
               {
-                "name": "dns-resolver-outbound",
-                "addressPrefix": "172.19.5.128/25",
+                "name": "DnsPrivateResolverOutboundSubnet",
+                "addressPrefix": "172.16.6.0/24",
                 "delegation": "Microsoft.Network/dnsResolvers"
               },
               {
                 "name": "VirtualNetworkApplianceSubnet",
-                "addressPrefix": "172.19.4.0/24"
+                "addressPrefix": "172.16.4.0/24"
               },
               {
                 "name": "RouteServerSubnet",
-                "addressPrefix": "172.19.3.0/24"
+                "addressPrefix": "172.16.3.0/24"
               },
               {
                 "name": "AzureFirewallSubnet",
-                "addressPrefix": "172.19.2.0/24"
+                "addressPrefix": "172.16.2.0/24"
               },
               {
                 "name": "AzureBastionSubnet",
-                "addressPrefix": "172.19.1.0/24",
+                "addressPrefix": "172.16.1.0/24",
                 "networkSecurityGroupResourceId": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('bastionNetworkSecurityGroupName'))]"
               },
               {
                 "name": "GatewaySubnet",
-                "addressPrefix": "172.19.0.0/24"
+                "addressPrefix": "172.16.0.0/24"
               }
             ],
             "subnetResourceIds": {
-              "dnsResolverInbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'dns-resolver-inbound')]",
-              "dnsResolverOutbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'dns-resolver-outbound')]",
+              "dnsResolverInbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'DnsPrivateResolverInboundSubnet')]",
+              "dnsResolverOutbound": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'DnsPrivateResolverOutboundSubnet')]",
               "routeServer": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'RouteServerSubnet')]",
-              "avd01": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'avd01')]",
-              "vcpeCorp": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'vcpe-corp')]"
+              "workload2": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'Workload2Subnet')]",
+              "workload1": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), 'Workload1Subnet')]"
             },
             "azureVmDefinitions": [
               {
                 "name": "vm-azure01",
-                "subnetResourceId": "[variables('subnetResourceIds').vcpeCorp]",
-                "privateIpAddress": "172.19.80.100"
+                "subnetResourceId": "[variables('subnetResourceIds').workload1]",
+                "privateIpAddress": "172.16.11.100"
               },
               {
                 "name": "vm-azure02",
-                "subnetResourceId": "[variables('subnetResourceIds').avd01]",
-                "privateIpAddress": "172.19.40.4"
+                "subnetResourceId": "[variables('subnetResourceIds').workload2]",
+                "privateIpAddress": "172.16.12.4"
               }
             ]
           },
@@ -17882,18 +17658,6 @@
                       "type": "Allow"
                     },
                     "rules": [
-                      {
-                        "name": "AllowRequestedAzureSubnets",
-                        "ruleType": "NetworkRule",
-                        "ipProtocols": [
-                          "Any"
-                        ],
-                        "sourceAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
-                        "destinationAddresses": "[variables('firewallTransitAzureAddressPrefixes')]",
-                        "destinationPorts": [
-                          "*"
-                        ]
-                      },
                       {
                         "name": "AllowAzureSubnetsToOnPrem",
                         "ruleType": "NetworkRule",
@@ -18055,7 +17819,7 @@
               "apiVersion": "2023-11-01",
               "name": "[format('{0}/GatewaySubnet', variables('virtualNetworkName'))]",
               "properties": {
-                "addressPrefix": "172.19.0.0/24",
+                "addressPrefix": "172.16.0.0/24",
                 "routeTable": {
                   "id": "[resourceId('Microsoft.Network/routeTables', 'rt-gateway-to-firewall-transit')]"
                 }
@@ -18118,7 +17882,7 @@
             },
             {
               "type": "Microsoft.Network/dnsForwardingRulesets",
-              "apiVersion": "2022-07-01",
+              "apiVersion": "2025-05-01",
               "name": "dnsfrs-azure-to-onprem",
               "location": "[parameters('location')]",
               "properties": {
@@ -18135,7 +17899,7 @@
             },
             {
               "type": "Microsoft.Network/dnsForwardingRulesets/forwardingRules",
-              "apiVersion": "2022-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[format('{0}/{1}', 'dnsfrs-azure-to-onprem', 'rule-onprem-ad')]",
               "properties": {
                 "domainName": "[variables('onPremDnsForwardingDomainName')]",
@@ -18153,7 +17917,7 @@
             },
             {
               "type": "Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks",
-              "apiVersion": "2022-07-01",
+              "apiVersion": "2025-05-01",
               "name": "[format('{0}/{1}', 'dnsfrs-azure-to-onprem', 'link-vnet-azure')]",
               "properties": {
                 "virtualNetwork": {
@@ -19508,7 +19272,7 @@
                   },
                   "addressPrefixes": {
                     "value": [
-                      "172.19.0.0/16"
+                      "172.16.0.0/16"
                     ]
                   },
                   "subnets": {
