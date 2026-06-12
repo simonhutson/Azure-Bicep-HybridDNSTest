@@ -12,6 +12,9 @@
         "Get-Command": true,
         "Push-Location": true,
         "Pop-Location": true,
-        ".\\main.bicepparam": true
+        ".\\main.bicepparam": true,
+        "ConvertFrom-Json": true,
+        ".vscode/settings.json": true,
+        "&": true
     }
 }

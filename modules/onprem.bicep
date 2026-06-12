@@ -17,6 +17,12 @@ param adminPassword string
 @description('Directory Services Restore Mode password for the new Active Directory forest.')
 param domainSafeModeAdminPassword string
 
+@description('Private DNS zone name hosted in Azure.')
+param privateDnsZoneName string = 'contoso.azure'
+
+@description('Private IP address of the Azure DNS Private Resolver inbound endpoint.')
+param dnsResolverInboundEndpointPrivateIpAddress string = '172.16.5.4'
+
 @description('Active Directory DNS domain name for the simulated on-prem forest.')
 param activeDirectoryDomainName string = 'contoso.onprem'
 
@@ -35,7 +41,7 @@ var activeDirectorySubnetName = 'ActiveDirectorySubnet'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var natGatewayName = 'ngw-onprem'
 var natGatewayPublicIpName = 'pip-ngw-onprem'
-var addsConfigurationVersion = '2026-06-09.1'
+var addsConfigurationVersion = '2026-06-12.1'
 var windowsServerGeneration2ImageReference = {
   publisher: 'MicrosoftWindowsServer'
   offer: 'WindowsServer'
@@ -52,7 +58,9 @@ function ConvertFrom-Utf8Base64 {{
 
 $domainName = ConvertFrom-Utf8Base64 '{0}'
 $netbiosName = ConvertFrom-Utf8Base64 '{1}'
-$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 '{2}') -AsPlainText -Force
+$azurePrivateDnsZoneName = (ConvertFrom-Utf8Base64 '{2}').TrimEnd('.')
+$dnsResolverInboundEndpointIpAddress = ConvertFrom-Utf8Base64 '{3}'
+$safeModePassword = ConvertTo-SecureString (ConvertFrom-Utf8Base64 '{4}') -AsPlainText -Force
 $statePath = 'C:\AzureData'
 
 New-Item -Path $statePath -ItemType Directory -Force | Out-Null
@@ -78,6 +86,23 @@ else {{
   Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
 }}
 
+if (-not (Get-WindowsFeature -Name DNS).Installed) {{
+  Install-WindowsFeature DNS -IncludeManagementTools | Out-Null
+}}
+
+Import-Module DnsServer
+
+$existingConditionalForwarder = Get-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -ErrorAction SilentlyContinue
+if ($existingConditionalForwarder) {{
+  $currentMasterServers = @($existingConditionalForwarder.MasterServers | ForEach-Object {{ $_.ToString() }})
+  if (($currentMasterServers.Count -ne 1) -or ($currentMasterServers[0] -ne $dnsResolverInboundEndpointIpAddress)) {{
+    Set-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -MasterServers $dnsResolverInboundEndpointIpAddress
+  }}
+}}
+else {{
+  Add-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -MasterServers $dnsResolverInboundEndpointIpAddress
+}}
+
 $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
 if (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{
   Write-Host "Domain controller role is already configured for $domainName."
@@ -97,7 +122,7 @@ if ($computerSystem.DomainRole -lt 4) {{
   Set-Content -Path (Join-Path $statePath 'adds-promotion-requested.txt') -Value (Get-Date -Format o)
   shutdown.exe /r /t 30 /c 'Completing AD DS forest promotion'
 }}
-''', base64(activeDirectoryDomainName), base64(activeDirectoryNetbiosName), base64(domainSafeModeAdminPassword))
+''', base64(activeDirectoryDomainName), base64(activeDirectoryNetbiosName), base64(privateDnsZoneName), base64(dnsResolverInboundEndpointPrivateIpAddress), base64(domainSafeModeAdminPassword))
 var configureAddsCommand = format('''
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{0}')); Invoke-Expression $script"
 ''', base64(configureAddsScript))

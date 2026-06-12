@@ -30,6 +30,9 @@ param vpnSharedKey string
 @description('Private DNS zone name for Azure VM registration.')
 param privateDnsZoneName string = 'contoso.azure'
 
+@description('Static private IP address assigned to the Azure DNS Private Resolver inbound endpoint.')
+param dnsResolverInboundEndpointPrivateIpAddress string = '172.16.5.4'
+
 @description('Active Directory DNS domain name for the simulated on-prem forest.')
 param activeDirectoryDomainName string = 'contoso.onprem'
 
@@ -65,6 +68,8 @@ module onPrem './modules/onprem.bicep' = {
     vmSize: vmSize
     adminPassword: adminPassword
     domainSafeModeAdminPassword: domainSafeModeAdminPassword
+    privateDnsZoneName: privateDnsZoneName
+    dnsResolverInboundEndpointPrivateIpAddress: dnsResolverInboundEndpointPrivateIpAddress
     activeDirectoryDomainName: activeDirectoryDomainName
     activeDirectoryNetbiosName: activeDirectoryNetbiosName
     tags: tags
@@ -80,6 +85,7 @@ module azure './modules/azure.bicep' = {
     vmSize: vmSize
     adminPassword: adminPassword
     privateDnsZoneName: privateDnsZoneName
+    dnsResolverInboundEndpointPrivateIpAddress: dnsResolverInboundEndpointPrivateIpAddress
     activeDirectoryDomainName: activeDirectoryDomainName
     onPremDnsServerIpAddress: onPrem.outputs.domainControllerPrivateIpAddress
     tags: tags

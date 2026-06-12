@@ -8,9 +8,12 @@ param(
     [string]$AdminUsername = 'azureadmin',
     [string]$VmSize = 'Standard_D4ads_v5',
     [string]$PrivateDnsZoneName = 'contoso.azure',
+    [string]$DnsResolverInboundEndpointPrivateIpAddress = '172.16.5.4',
     [string]$ActiveDirectoryDomainName = 'contoso.onprem',
     [ValidateLength(1, 15)]
     [string]$ActiveDirectoryNetbiosName = 'CONTOSO',
+    [ValidateRange(1, 180)]
+    [int]$DomainControllerReadyTimeoutMinutes = 45,
     [string]$SubscriptionId = $env:AZURE_SUBSCRIPTION_ID,
     [securestring]$AdminPassword,
     [securestring]$DomainSafeModeAdminPassword,
@@ -21,7 +24,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$deployScriptVersion = '2026-06-09.2'
+$deployScriptVersion = '2026-06-12.2'
 $dnsForwardingRulesetName = 'dnsfrs-azure-to-onprem'
 $dnsForwardingRulesetVirtualNetworkLinkName = 'link-vnet-azure'
 $dnsForwardingRulesetApiVersion = '2025-05-01'
@@ -88,6 +91,44 @@ function Write-AzCliOutput {
     if (-not [string]::IsNullOrWhiteSpace($outputText)) {
         Write-Host $outputText
     }
+}
+
+function ConvertTo-AzVmRunCommandMessageText {
+    param(
+        [AllowEmptyString()]
+        [string]$OutputText
+    )
+
+    if ([string]::IsNullOrWhiteSpace($OutputText)) {
+        return ''
+    }
+
+    try {
+        $runCommandResult = $OutputText | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        return $OutputText
+    }
+
+    $valueProperty = $runCommandResult.PSObject.Properties['value']
+    if ($null -eq $valueProperty) {
+        return $OutputText
+    }
+
+    $messages = @(
+        foreach ($statusEntry in @($valueProperty.Value)) {
+            $messageProperty = $statusEntry.PSObject.Properties['message']
+            if ($null -ne $messageProperty -and -not [string]::IsNullOrWhiteSpace([string]$messageProperty.Value)) {
+                ([string]$messageProperty.Value).Trim()
+            }
+        }
+    )
+
+    if ($messages.Count -eq 0) {
+        return ''
+    }
+
+    return ($messages -join [Environment]::NewLine).Trim()
 }
 
 function Invoke-AzDeploymentCommand {
@@ -196,25 +237,48 @@ function Wait-OnPremDomainControllerReady {
 
     $deadline = (Get-Date).ToUniversalTime().AddMinutes($TimeoutMinutes)
     $attempt = 1
+    $encodedExpectedDomainName = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($DomainName))
     $verificationScript = @'
-param([string]$ExpectedDomainName)
-
 $ErrorActionPreference = 'Stop'
+$ExpectedDomainName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('__EXPECTED_DOMAIN_NAME_BASE64__'))
+
+function Write-AdReadinessResult {
+    param(
+        [Parameter(Mandatory = $true)]
+        [bool]$Ready,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    $status = if ($Ready) { 'AD_READY' } else { 'AD_NOT_READY' }
+    [Console]::Out.WriteLine("$($status):$Message")
+}
+
+try {
 $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
 
 if (($computerSystem.DomainRole -lt 4) -or ($computerSystem.Domain -ine $ExpectedDomainName)) {
-    throw "VM is not yet a domain controller for $ExpectedDomainName. Current domain role: $($computerSystem.DomainRole); current domain: $($computerSystem.Domain)."
+    Write-AdReadinessResult -Ready $false -Message "VM is not yet a domain controller for $ExpectedDomainName. Current domain role: $($computerSystem.DomainRole); current domain: $($computerSystem.Domain)."
+    exit 1
 }
 
 Import-Module ActiveDirectory -ErrorAction Stop
 $domain = Get-ADDomain -ErrorAction Stop
 
 if ($domain.DNSRoot -ine $ExpectedDomainName) {
-    throw "Active Directory domain '$($domain.DNSRoot)' does not match expected domain '$ExpectedDomainName'."
+    Write-AdReadinessResult -Ready $false -Message "Active Directory domain '$($domain.DNSRoot)' does not match expected domain '$ExpectedDomainName'."
+    exit 1
 }
 
-Write-Output "AD_READY:$($domain.DNSRoot):$env:COMPUTERNAME"
-'@
+Write-AdReadinessResult -Ready $true -Message "$($domain.DNSRoot):$env:COMPUTERNAME"
+exit 0
+}
+catch {
+    Write-AdReadinessResult -Ready $false -Message $_.Exception.Message
+    exit 1
+}
+'@.Replace('__EXPECTED_DOMAIN_NAME_BASE64__', $encodedExpectedDomainName)
 
     while ($true) {
         Write-Host "Checking Active Directory forest readiness on '$VmName' (attempt $attempt)..."
@@ -223,24 +287,32 @@ Write-Output "AD_READY:$($domain.DNSRoot):$env:COMPUTERNAME"
             --name $VmName `
             --command-id RunPowerShellScript `
             --scripts $verificationScript `
-            --parameters "ExpectedDomainName=$DomainName" `
-            --query 'value[0].message' `
-            --output tsv `
+            --output json `
             --only-show-errors 2>&1
         $exitCode = $LASTEXITCODE
 
         $outputText = ConvertTo-AzCliOutputText -Output $output
-        if (($exitCode -eq 0) -and ($outputText -match 'AD_READY:')) {
-            Write-AzCliOutput -Output $output
+        $messageText = ConvertTo-AzVmRunCommandMessageText -OutputText $outputText
+        $lastRunCommandOutput = $messageText
+        if ([string]::IsNullOrWhiteSpace($lastRunCommandOutput)) {
+            $lastRunCommandOutput = $outputText
+        }
+        if ([string]::IsNullOrWhiteSpace($lastRunCommandOutput)) {
+            $lastRunCommandOutput = "Azure CLI returned no Run Command output. Exit code: $exitCode."
+        }
+
+        if ($messageText -match '(?m)^AD_READY:') {
+            Write-Host $messageText
             return
         }
 
         $remainingSeconds = [int][Math]::Ceiling(($deadline - (Get-Date).ToUniversalTime()).TotalSeconds)
         if ($remainingSeconds -le 0) {
-            throw "Active Directory forest '$DomainName' did not become ready on VM '$VmName' within $TimeoutMinutes minutes. Last Azure Run Command output: $outputText"
+            throw "Active Directory forest '$DomainName' did not become ready on VM '$VmName' within $TimeoutMinutes minutes. Last Azure Run Command output: $lastRunCommandOutput"
         }
 
-        Write-Host "Active Directory forest is not ready yet. Waiting 30 seconds before retry $($attempt + 1)..."
+        Write-Host "Active Directory forest is not ready yet. Last check: $lastRunCommandOutput"
+        Write-Host "Waiting 30 seconds before retry $($attempt + 1)..."
         Start-Sleep -Seconds 30
         $attempt++
     }
@@ -316,6 +388,7 @@ try {
             domainSafeModeAdminPassword = @{ value = (ConvertTo-PlainText -SecureValue $DomainSafeModeAdminPassword) }
             vpnSharedKey = @{ value = (ConvertTo-PlainText -SecureValue $VpnSharedKey) }
             privateDnsZoneName = @{ value = $PrivateDnsZoneName }
+            dnsResolverInboundEndpointPrivateIpAddress = @{ value = $DnsResolverInboundEndpointPrivateIpAddress }
             activeDirectoryDomainName = @{ value = $ActiveDirectoryDomainName }
             activeDirectoryNetbiosName = @{ value = $ActiveDirectoryNetbiosName }
             tags = @{
@@ -384,7 +457,8 @@ try {
     Wait-OnPremDomainControllerReady `
         -ResourceGroupName $OnPremResourceGroupName `
         -VmName 'vm-onprem01' `
-        -DomainName $ActiveDirectoryDomainName
+        -DomainName $ActiveDirectoryDomainName `
+        -TimeoutMinutes $DomainControllerReadyTimeoutMinutes
 }
 finally {
     if (Test-Path -Path $tempParametersFile -PathType Leaf) {

@@ -16,6 +16,9 @@ param adminPassword string
 @description('Private DNS zone name.')
 param privateDnsZoneName string = 'contoso.azure'
 
+@description('Static private IP address assigned to the Azure DNS Private Resolver inbound endpoint.')
+param dnsResolverInboundEndpointPrivateIpAddress string = '172.16.5.4'
+
 @description('Active Directory DNS domain name hosted by the simulated on-prem DNS server.')
 param activeDirectoryDomainName string = 'contoso.onprem'
 
@@ -27,7 +30,6 @@ param tags object = {}
 
 var virtualNetworkName = 'vnet-azure'
 var bastionNetworkSecurityGroupName = 'nsg-azure-bastion'
-var dnsResolverInboundEndpointPrivateIpAddress = '172.16.5.4'
 var onPremVirtualNetworkAddressPrefix = '10.0.0.0/8'
 var natGatewayName = 'ngw-azure'
 var natGatewayPublicIpName = 'pip-ngw-azure'

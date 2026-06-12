@@ -15,6 +15,7 @@ This repository contains a modular Bicep deployment for a hybrid DNS lab using A
 - NAT gateways `ngw-onprem` and `ngw-azure`, each with a Standard static public IP for private workload outbound SNAT.
 - Azure DNS Private Resolver with inbound endpoint `172.16.5.4` and outbound endpoint subnet.
 - Azure DNS Private Resolver forwarding ruleset linked to `vnet-azure` for forwarding `contoso.onprem` queries to the on-prem DNS server.
+- DNS conditional forwarder on `vm-onprem01` for `contoso.azure`, forwarding to the Azure DNS Private Resolver inbound endpoint.
 - Private DNS zone `contoso.azure`, linked to `vnet-azure` with registration enabled.
 - Azure Firewall Standard and Azure Bastion Developer.
 - Dedicated NSGs for each `AzureBastionSubnet` with the Microsoft-documented Azure Bastion inbound and outbound rules.
@@ -82,10 +83,22 @@ The Active Directory DNS domain name defaults to `contoso.onprem` and can be ove
 .\deploy.ps1 -ActiveDirectoryDomainName 'corp.example' -ActiveDirectoryNetbiosName 'CORP'
 ```
 
+The Azure private DNS zone defaults to `contoso.azure`, and `vm-onprem01` is configured with a matching conditional forwarder to the DNS Private Resolver inbound endpoint:
+
+```powershell
+.\deploy.ps1 -PrivateDnsZoneName 'contoso.azure' -DnsResolverInboundEndpointPrivateIpAddress '172.16.5.4'
+```
+
 To validate without deploying:
 
 ```powershell
 .\deploy.ps1 -ValidateOnly
+```
+
+If the domain controller promotion is unusually slow, the post-deployment readiness wait can be extended:
+
+```powershell
+.\deploy.ps1 -DomainControllerReadyTimeoutMinutes 90
 ```
 
 To preview changes:
@@ -98,6 +111,7 @@ To preview changes:
 
 - The deployment uses AVM modules for VNets, NSGs, Bastion, Private DNS, VPN gateways, gateway connections, and the Windows VM. Azure Firewall and DNS Resolver resources are deployed directly where the template needs tighter control.
 - The DNS forwarding ruleset sends queries for the on-prem AD DNS namespace to `vm-onprem01` at `10.0.11.4`.
+- `vm-onprem01` has a DNS conditional forwarder for the Azure private DNS zone that targets the DNS Private Resolver inbound endpoint.
 - If Azure DNS Private Resolver returns a forwarding ruleset VNet link circuit-breaker error, `deploy.ps1` deletes the stale `link-vnet-azure` link and retries the deployment once.
 - `vm-onprem01` promotes itself to a domain controller during deployment using the Custom Script Extension, sets its Windows network profile to Private, allows inbound ICMP in Windows Firewall, then reboots once to complete AD DS configuration. `deploy.ps1` waits for the VM to report that the Active Directory forest is ready before it exits.
 - Azure Bastion Developer does not support all Standard/Premium Bastion features. The template intentionally keeps Bastion settings minimal.

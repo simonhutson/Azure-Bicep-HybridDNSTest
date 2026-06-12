@@ -9,6 +9,7 @@ param adminPassword = readEnvironmentVariable('ADMIN_PASSWORD', '')
 param domainSafeModeAdminPassword = readEnvironmentVariable('DOMAIN_SAFE_MODE_ADMIN_PASSWORD', '')
 param vpnSharedKey = readEnvironmentVariable('VPN_SHARED_KEY', '')
 param privateDnsZoneName = 'contoso.azure'
+param dnsResolverInboundEndpointPrivateIpAddress = '172.16.5.4'
 param activeDirectoryDomainName = 'contoso.onprem'
 param activeDirectoryNetbiosName = 'CONTOSO'
 param tags = {
