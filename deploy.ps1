@@ -24,7 +24,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$deployScriptVersion = '2026-06-12.2'
+$deployScriptVersion = '2026-06-13.2'
 $dnsForwardingRulesetName = 'dnsfrs-azure-to-onprem'
 $dnsForwardingRulesetVirtualNetworkLinkName = 'link-vnet-azure'
 $dnsForwardingRulesetApiVersion = '2025-05-01'
@@ -115,6 +115,8 @@ function ConvertTo-AzVmRunCommandMessageText {
         return $OutputText
     }
 
+    # Azure VM Run Command returns stdout/stderr as component status messages when
+    # using --output json. Only non-empty messages are guest-script output.
     $messages = @(
         foreach ($statusEntry in @($valueProperty.Value)) {
             $messageProperty = $statusEntry.PSObject.Properties['message']
@@ -129,6 +131,62 @@ function ConvertTo-AzVmRunCommandMessageText {
     }
 
     return ($messages -join [Environment]::NewLine).Trim()
+}
+
+function ConvertTo-AzVmRunCommandStatusSummary {
+    param(
+        [AllowEmptyString()]
+        [string]$OutputText,
+
+        [int]$ExitCode
+    )
+
+    if ([string]::IsNullOrWhiteSpace($OutputText)) {
+        return "Azure CLI returned no Run Command output. Exit code: $ExitCode."
+    }
+
+    try {
+        $runCommandResult = $OutputText | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        return $OutputText
+    }
+
+    $valueProperty = $runCommandResult.PSObject.Properties['value']
+    if ($null -eq $valueProperty) {
+        return $OutputText
+    }
+
+    # Run Command can report StdOut/StdErr as succeeded while their messages are
+    # empty, so summarize status metadata instead of printing the raw JSON blob.
+    $statusSummaries = @(
+        foreach ($statusEntry in @($valueProperty.Value)) {
+            $codeProperty = $statusEntry.PSObject.Properties['code']
+            $displayStatusProperty = $statusEntry.PSObject.Properties['displayStatus']
+            $code = if ($null -eq $codeProperty) { '' } else { [string]$codeProperty.Value }
+            $displayStatus = if ($null -eq $displayStatusProperty) { '' } else { [string]$displayStatusProperty.Value }
+
+            if ([string]::IsNullOrWhiteSpace($code) -and [string]::IsNullOrWhiteSpace($displayStatus)) {
+                continue
+            }
+
+            if ([string]::IsNullOrWhiteSpace($displayStatus)) {
+                $code
+            }
+            elseif ([string]::IsNullOrWhiteSpace($code)) {
+                $displayStatus
+            }
+            else {
+                "$code ($displayStatus)"
+            }
+        }
+    )
+
+    if ($statusSummaries.Count -eq 0) {
+        return $OutputText
+    }
+
+    return "Azure CLI returned no Run Command stdout/stderr message. Exit code: $ExitCode. Component statuses: $($statusSummaries -join '; ')."
 }
 
 function Invoke-AzDeploymentCommand {
@@ -240,6 +298,8 @@ function Wait-OnPremDomainControllerReady {
     $encodedExpectedDomainName = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($DomainName))
     $verificationScript = @'
 $ErrorActionPreference = 'Stop'
+# The ActiveDirectory module can emit CLIXML progress records through Run Command.
+$ProgressPreference = 'SilentlyContinue'
 $ExpectedDomainName = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('__EXPECTED_DOMAIN_NAME_BASE64__'))
 
 function Write-AdReadinessResult {
@@ -252,7 +312,9 @@ function Write-AdReadinessResult {
     )
 
     $status = if ($Ready) { 'AD_READY' } else { 'AD_NOT_READY' }
-    [Console]::Out.WriteLine("$($status):$Message")
+    # Use the success output stream so Azure VM Run Command returns the marker in
+    # the StdOut component message.
+    Write-Output "$($status):$Message"
 }
 
 try {
@@ -279,6 +341,11 @@ catch {
     exit 1
 }
 '@.Replace('__EXPECTED_DOMAIN_NAME_BASE64__', $encodedExpectedDomainName)
+    # From local PowerShell, passing a multi-line string directly to az vm
+    # run-command invoke --scripts can run only the first line. Encode the guest
+    # script so Azure CLI receives a single command-line argument.
+    $encodedVerificationCommand = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($verificationScript))
+    $runCommandScript = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand {0}; exit $LASTEXITCODE' -f $encodedVerificationCommand
 
     while ($true) {
         Write-Host "Checking Active Directory forest readiness on '$VmName' (attempt $attempt)..."
@@ -286,7 +353,7 @@ catch {
             --resource-group $ResourceGroupName `
             --name $VmName `
             --command-id RunPowerShellScript `
-            --scripts $verificationScript `
+            --scripts $runCommandScript `
             --output json `
             --only-show-errors 2>&1
         $exitCode = $LASTEXITCODE
@@ -295,10 +362,7 @@ catch {
         $messageText = ConvertTo-AzVmRunCommandMessageText -OutputText $outputText
         $lastRunCommandOutput = $messageText
         if ([string]::IsNullOrWhiteSpace($lastRunCommandOutput)) {
-            $lastRunCommandOutput = $outputText
-        }
-        if ([string]::IsNullOrWhiteSpace($lastRunCommandOutput)) {
-            $lastRunCommandOutput = "Azure CLI returned no Run Command output. Exit code: $exitCode."
+            $lastRunCommandOutput = ConvertTo-AzVmRunCommandStatusSummary -OutputText $outputText -ExitCode $exitCode
         }
 
         if ($messageText -match '(?m)^AD_READY:') {
