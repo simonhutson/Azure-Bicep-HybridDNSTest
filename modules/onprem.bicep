@@ -41,7 +41,7 @@ var activeDirectorySubnetName = 'ActiveDirectorySubnet'
 var bastionNetworkSecurityGroupName = 'nsg-onprem-bastion'
 var natGatewayName = 'ngw-onprem'
 var natGatewayPublicIpName = 'pip-ngw-onprem'
-var addsConfigurationVersion = '2026-06-12.1'
+var addsConfigurationVersion = '2026-06-12.4'
 var windowsServerGeneration2ImageReference = {
   publisher: 'MicrosoftWindowsServer'
   offer: 'WindowsServer'
@@ -56,6 +56,26 @@ function ConvertFrom-Utf8Base64 {{
   [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Value))
 }}
 
+function Install-FeatureIfMissing {{
+  param(
+    [Parameter(Mandatory = $true)][string] $Name,
+    [switch] $IncludeManagementTools
+  )
+
+  $feature = Get-WindowsFeature -Name $Name -ErrorAction SilentlyContinue
+  if ($feature -and -not $feature.Installed) {{
+    $installArgs = @{{ Name = $Name }}
+    if ($IncludeManagementTools) {{
+      $installArgs['IncludeManagementTools'] = $true
+    }}
+
+    $result = Install-WindowsFeature @installArgs
+    if (-not $result.Success) {{
+      throw "Failed to install Windows feature '$Name'. Exit code: $($result.ExitCode). Restart needed: $($result.RestartNeeded)."
+    }}
+  }}
+}}
+
 $domainName = ConvertFrom-Utf8Base64 '{0}'
 $netbiosName = ConvertFrom-Utf8Base64 '{1}'
 $azurePrivateDnsZoneName = (ConvertFrom-Utf8Base64 '{2}').TrimEnd('.')
@@ -65,43 +85,70 @@ $statePath = 'C:\AzureData'
 
 New-Item -Path $statePath -ItemType Directory -Force | Out-Null
 
-$networkProfiles = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)
-foreach ($networkProfile in $networkProfiles) {{
-  if ($networkProfile.NetworkCategory -eq 'Public') {{
-    Set-NetConnectionProfile -InterfaceIndex $networkProfile.InterfaceIndex -NetworkCategory Private
+Get-NetConnectionProfile -ErrorAction SilentlyContinue |
+  Where-Object {{ $_.NetworkCategory -eq 'Public' }} |
+  ForEach-Object {{ Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private }}
+
+$icmpRules = @(
+  @('HybridDns-Allow-ICMPv4-In', 'Hybrid DNS Lab - Allow ICMPv4 Inbound', 'ICMPv4'),
+  @('HybridDns-Allow-ICMPv6-In', 'Hybrid DNS Lab - Allow ICMPv6 Inbound', 'ICMPv6')
+)
+
+foreach ($icmpRule in $icmpRules) {{
+  if (Get-NetFirewallRule -Name $icmpRule[0] -ErrorAction SilentlyContinue) {{
+    Set-NetFirewallRule -Name $icmpRule[0] -Enabled True -Profile Any -Direction Inbound -Action Allow
+  }}
+  else {{
+    New-NetFirewallRule -Name $icmpRule[0] -DisplayName $icmpRule[1] -Profile Any -Direction Inbound -Action Allow -Protocol $icmpRule[2] | Out-Null
   }}
 }}
 
-if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -ErrorAction SilentlyContinue)) {{
-  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv4 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv4 | Out-Null
-}}
-else {{
-  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv4-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
-}}
+Install-FeatureIfMissing -Name DNS -IncludeManagementTools
+Install-FeatureIfMissing -Name RSAT-DNS-Server
 
-if (-not (Get-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -ErrorAction SilentlyContinue)) {{
-  New-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -DisplayName 'Hybrid DNS Lab - Allow ICMPv6 Inbound' -Profile Any -Direction Inbound -Action Allow -Protocol ICMPv6 | Out-Null
-}}
-else {{
-  Set-NetFirewallRule -Name 'HybridDns-Allow-ICMPv6-In' -Enabled True -Profile Any -Direction Inbound -Action Allow
-}}
+function Invoke-DnsCmd {{
+  param([Parameter(Mandatory = $true)][string[]] $Arguments)
 
-if (-not (Get-WindowsFeature -Name DNS).Installed) {{
-  Install-WindowsFeature DNS -IncludeManagementTools | Out-Null
-}}
+  $dnsCmdPath = Join-Path $env:SystemRoot 'System32\dnscmd.exe'
+  if (-not (Test-Path $dnsCmdPath)) {{
+    throw "dnscmd.exe was not found at $dnsCmdPath."
+  }}
 
-Import-Module DnsServer
-
-$existingConditionalForwarder = Get-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -ErrorAction SilentlyContinue
-if ($existingConditionalForwarder) {{
-  $currentMasterServers = @($existingConditionalForwarder.MasterServers | ForEach-Object {{ $_.ToString() }})
-  if (($currentMasterServers.Count -ne 1) -or ($currentMasterServers[0] -ne $dnsResolverInboundEndpointIpAddress)) {{
-    Set-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -MasterServers $dnsResolverInboundEndpointIpAddress
+  $dnsCmdOutput = & $dnsCmdPath @Arguments 2>&1
+  $dnsCmdExitCode = $LASTEXITCODE
+  if ($dnsCmdOutput) {{
+    $dnsCmdOutput | ForEach-Object {{ Write-Host $_ }}
+  }}
+  if ($dnsCmdExitCode -ne 0) {{
+    throw "dnscmd.exe failed with exit code $dnsCmdExitCode while running: dnscmd $($Arguments -join ' ')"
   }}
 }}
-else {{
-  Add-DnsServerConditionalForwarderZone -Name $azurePrivateDnsZoneName -MasterServers $dnsResolverInboundEndpointIpAddress
+
+$dnsCmdPath = Join-Path $env:SystemRoot 'System32\dnscmd.exe'
+if (-not (Test-Path $dnsCmdPath)) {{
+  throw "dnscmd.exe was not found at $dnsCmdPath."
 }}
+
+$zoneInfoOutput = & $dnsCmdPath . /ZoneInfo $azurePrivateDnsZoneName 2>&1
+$zoneInfoExitCode = $LASTEXITCODE
+if ($zoneInfoExitCode -eq 0) {{
+  $forwarderZonesOutput = & $dnsCmdPath . /EnumZones /Forwarder 2>&1
+  if ($LASTEXITCODE -ne 0) {{
+    throw "Unable to verify whether existing DNS zone '$azurePrivateDnsZoneName' is a forwarder. dnscmd output: $($forwarderZonesOutput -join ' ')"
+  }}
+
+  $forwarderZonesText = $forwarderZonesOutput -join [Environment]::NewLine
+  if ($forwarderZonesText -notmatch "(?im)(^|\s)$([regex]::Escape($azurePrivateDnsZoneName))(\s|$)") {{
+    throw "DNS zone '$azurePrivateDnsZoneName' already exists, but dnscmd did not list it as a forwarder zone. ZoneInfo output: $($zoneInfoOutput -join ' ')"
+  }}
+
+  Invoke-DnsCmd -Arguments @('.', '/ZoneDelete', $azurePrivateDnsZoneName, '/f')
+}}
+elseif (($zoneInfoOutput -join ' ') -notmatch 'DNS_ERROR_ZONE_DOES_NOT_EXIST|9601|does not exist|not found') {{
+  throw "Unable to inspect DNS zone '$azurePrivateDnsZoneName'. dnscmd output: $($zoneInfoOutput -join ' ')"
+}}
+
+Invoke-DnsCmd -Arguments @('.', '/ZoneAdd', $azurePrivateDnsZoneName, '/Forwarder', $dnsResolverInboundEndpointIpAddress)
 
 $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
 if (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domainName)) {{
@@ -111,7 +158,10 @@ if (($computerSystem.DomainRole -ge 4) -and ($computerSystem.Domain -ieq $domain
 
 $adDsFeature = Get-WindowsFeature -Name AD-Domain-Services
 if (-not $adDsFeature.Installed) {{
-  Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools
+  $adInstallResult = Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools
+  if (-not $adInstallResult.Success) {{
+    throw "Failed to install AD DS. Exit code: $($adInstallResult.ExitCode). Restart needed: $($adInstallResult.RestartNeeded)."
+  }}
 }}
 
 Import-Module ADDSDeployment
@@ -124,7 +174,7 @@ if ($computerSystem.DomainRole -lt 4) {{
 }}
 ''', base64(activeDirectoryDomainName), base64(activeDirectoryNetbiosName), base64(privateDnsZoneName), base64(dnsResolverInboundEndpointPrivateIpAddress), base64(domainSafeModeAdminPassword))
 var configureAddsCommand = format('''
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{0}')); Invoke-Expression $script"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-Expression ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{0}')))"
 ''', base64(configureAddsScript))
 
 var bastionNetworkSecurityGroupRules = [

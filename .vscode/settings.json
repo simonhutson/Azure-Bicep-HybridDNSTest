@@ -15,6 +15,15 @@
         ".\\main.bicepparam": true,
         "ConvertFrom-Json": true,
         ".vscode/settings.json": true,
-        "&": true
+        "&": true,
+        "/^\\$testScript = 'Write-Host \"WRAPPER_OK Is64=\\$\\(\\[Environment\\]::Is64BitProcess\\)\"'; \\$encodedTestScript = \\[System\\.Convert\\]::ToBase64String\\(\\[System\\.Text\\.Encoding\\]::UTF8\\.GetBytes\\(\\$testScript\\)\\); \\$command = \"powershell\\.exe -NoProfile -ExecutionPolicy Bypass -Command `\"`\\$encodedScript = '\\$encodedTestScript'; `\\$nativePowerShell = Join-Path `\\$env:SystemRoot 'Sysnative\\\\WindowsPowerShell\\\\v1\\.0\\\\powershell\\.exe'; if \\(-not \\[Environment\\]::Is64BitProcess -and \\(Test-Path `\\$nativePowerShell\\)\\) \\{ `\\$rerunCommand = \\[string\\]::Format\\('`\\$encodedScript = ''\\{0\\}''; `\\$script = \\[System\\.Text\\.Encoding\\]::UTF8\\.GetString\\(\\[System\\.Convert\\]::FromBase64String\\(`\\$encodedScript\\)\\); Invoke-Expression `\\$script', `\\$encodedScript\\); `\\$encodedCommand = \\[System\\.Convert\\]::ToBase64String\\(\\[System\\.Text\\.Encoding\\]::Unicode\\.GetBytes\\(`\\$rerunCommand\\)\\); & `\\$nativePowerShell -NoProfile -ExecutionPolicy Bypass -EncodedCommand `\\$encodedCommand; exit `\\$LASTEXITCODE \\}; `\\$script = \\[System\\.Text\\.Encoding\\]::UTF8\\.GetString\\(\\[System\\.Convert\\]::FromBase64String\\(`\\$encodedScript\\)\\); Invoke-Expression `\\$script`\"\"; cmd\\.exe /c \\$command; if \\(\\$LASTEXITCODE -ne 0\\) \\{ throw \"Wrapper command failed with exit code \\$LASTEXITCODE\" \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "ConvertFrom-BicepFormatTemplate": true,
+        "/^\\$padding = '#' \\* 5200; \\$testScript = \"Write-Host 'WRAPPER_OK'; `\\$null = '\\$padding'\"; \\$encodedTestScript = \\[Convert\\]::ToBase64String\\(\\[Text\\.Encoding\\]::UTF8\\.GetBytes\\(\\$testScript\\)\\); \\$command = \"powershell\\.exe -NoProfile -ExecutionPolicy Bypass -Command `\"Invoke-Expression \\(\\[System\\.Text\\.Encoding\\]::UTF8\\.GetString\\(\\[System\\.Convert\\]::FromBase64String\\('\\$encodedTestScript'\\)\\)\\)`\"\"; \\[pscustomobject\\]@\\{ CommandLength = \\$command\\.Length; UnderCmdExe8191Limit = \\(\\$command\\.Length -lt 8191\\) \\} \\| Format-List; cmd\\.exe /c \\$command; if \\(\\$LASTEXITCODE -ne 0\\) \\{ throw \"Wrapper smoke test failed with exit code \\$LASTEXITCODE\" \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }
